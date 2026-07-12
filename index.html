@@ -106,12 +106,20 @@
   <!-- Category pill navigation (top on desktop, bottom bar on mobile) -->
   <nav class="cat-nav" role="tablist" aria-label="Categories">
     <button class="tab active" data-category="book_any" role="tab">
-      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h6a2 2 0 0 1 2 2v14H7a2 2 0 0 0-2 2V4Zm14 0h-6v18h6a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/></svg>
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6C8 4 4 4.5 3 5.5v13C4 17.5 8 17 12 19c4-2 8-1.5 9-1.5v-13c-1-1-5-1.5-9 .5Z"/></svg>
       <span>Books</span>
     </button>
     <button class="tab" data-category="article" role="tab">
-      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v16l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1Zm2 5h6v2H9V8Zm0 4h6v2H9v-2Z"/></svg>
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2Zm8 1.5V8h4.5L14 3.5ZM8 11h8v1.5H8V11Zm0 3h8v1.5H8V14Zm0 3h5v1.5H8V17Z"/></svg>
       <span>Articles</span>
+    </button>
+    <button class="tab" data-category="magazine" role="tab">
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm1 2v6h12V5H6Zm0 9h8v1.5H6V14Zm0 3h12v1.5H6V17Z"/></svg>
+      <span>Magazines</span>
+    </button>
+    <button class="tab" data-category="standards" role="tab">
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2Zm8 1.5V8h4.5L14 3.5ZM8 12l1.6 1.6L13 10l1 1-4.4 4.4L7 13l1-1Z"/></svg>
+      <span>Standards</span>
     </button>
   </nav>
 
@@ -215,13 +223,38 @@
           <button class="wcat" data-category="article">
             <span class="wcat-ic">📄</span>
             <b>Articles</b>
-            <span>Journals, magazines, standards</span>
+            <span>Scientific journal articles</span>
+          </button>
+          <button class="wcat" data-category="magazine">
+            <span class="wcat-ic">📰</span>
+            <b>Magazines</b>
+            <span>Issues &amp; periodicals</span>
+          </button>
+          <button class="wcat" data-category="standards">
+            <span class="wcat-ic">📐</span>
+            <b>Standards</b>
+            <span>Technical &amp; legal standards</span>
           </button>
         </div>
         <p class="hint">Tip: tap a category, then type your query. Use Filters for power search.</p>
       </div>
     </div>
     <div id="status" class="status" hidden></div>
+    <div id="results-toolbar" class="results-toolbar" hidden>
+      <span id="results-count" class="results-count"></span>
+      <label class="sort-wrap">Sort
+        <select id="sort-select">
+          <option value="">Relevance</option>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="largest">Largest</option>
+          <option value="smallest">Smallest</option>
+          <option value="newest_added">Newest added</option>
+          <option value="oldest_added">Oldest added</option>
+          <option value="random">Random</option>
+        </select>
+      </label>
+    </div>
     <div id="results" class="results-grid" aria-live="polite"></div>
     <div id="load-more-wrap" class="load-more-wrap" hidden>
       <button id="load-more" class="btn ghost">Load more</button>

@@ -218,7 +218,30 @@ main { padding: 22px 18px 40px; max-width: 1280px; margin: 0 auto; }
 }
 .badge.accent { background: var(--primary-container); color: var(--primary); border-color: transparent; }
 
+.card .doc-type {
+  font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--primary); line-height: 1.3;
+}
+
 .load-more-wrap { display: flex; justify-content: center; padding: 28px; }
+
+/* ---------- Results toolbar (count + sort) ---------- */
+.results-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 4px 2px 16px; padding: 4px 2px;
+}
+.results-count { font-size: 13px; color: var(--on-surface-variant); }
+.sort-wrap {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--on-surface-variant); font-weight: 600;
+}
+.sort-wrap select {
+  padding: 9px 12px; border-radius: var(--pill);
+  border: 1px solid var(--outline); background: var(--surface-2);
+  color: var(--on-surface); font-size: 13px; font-family: var(--font); font-weight: 600;
+  cursor: pointer;
+}
+.sort-wrap select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-container); }
 
 /* ---------- Viewer ---------- */
 .viewer {

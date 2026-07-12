@@ -23,7 +23,10 @@ const Search = (() => {
   /* Map a UI category tab to Anna's "content" filter. */
   function categoryToContent(category) {
     if (category === 'book_any') return 'book_any';
-    if (category === 'article') return ['journal_article', 'magazine', 'standards_document'];
+    if (category === 'article') return ['journal_article']; // scientific articles only
+    if (category === 'magazine') return ['magazine'];
+    if (category === 'standards') return ['standards_document'];
+    if (category === 'comic') return ['book_comic'];
     return ''; // "top" -> all content
   }
 

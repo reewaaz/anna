@@ -32,6 +32,9 @@
     results: $('results'),
     welcome: $('welcome'),
     status: $('status'),
+    resultsToolbar: $('results-toolbar'),
+    resultsCount: $('results-count'),
+    sortSelect: $('sort-select'),
     loadMoreWrap: $('load-more-wrap'),
     loadMore: $('load-more'),
     settingsToggle: $('settings-toggle'),
@@ -125,14 +128,20 @@
         body.appendChild(author);
       }
 
+      if (r.type) {
+        const typeEl = document.createElement('div');
+        typeEl.className = 'doc-type';
+        typeEl.textContent = r.type;
+        body.appendChild(typeEl);
+      }
+
       const meta = document.createElement('div');
       meta.className = 'meta';
       const badges = [
         r.ext && r.ext.toUpperCase(),
         r.size,
         r.year,
-        r.lang && r.lang.toUpperCase(),
-        r.type
+        r.lang && r.lang.toUpperCase()
       ];
       for (const b of badges) {
         if (!b) continue;
@@ -162,6 +171,14 @@
     div.className = 'cover missing';
     div.textContent = (title || 'No cover').slice(0, 28);
     return div;
+  }
+
+  function updateToolbar() {
+    const has = state.results.length > 0;
+    els.resultsToolbar.hidden = !has;
+    els.resultsCount.textContent = has
+      ? state.results.length + (state.results.length === 1 ? ' result' : ' results')
+      : '';
   }
 
   async function doSearch(reset = true) {
@@ -199,6 +216,7 @@
       state.results = state.results.concat(results);
       renderCards(results);
       els.loadMoreWrap.hidden = results.length < 1;
+      updateToolbar();
     } catch (err) {
       showStatus('Search failed. The proxy Worker (anna.riwaj-p.workers.dev) may be down or not deployed yet. ' +
         'Deploy it with: cd worker && wrangler deploy  (see worker/README).', true);
@@ -266,7 +284,7 @@
   async function openDownloads(r) {
     els.downloads.hidden = false;
     els.downloadsTitle.textContent = r.title || 'Downloads';
-    els.downloadsSub.textContent = [r.authors, r.ext && r.ext.toUpperCase(), r.size, r.year]
+    els.downloadsSub.textContent = [r.type, r.authors, r.ext && r.ext.toUpperCase(), r.size, r.year]
       .filter(Boolean).join('  ·  ');
     els.downloadsList.innerHTML = '';
     els.downloadsPage.href = r.href || '#';
@@ -312,6 +330,8 @@
     els.results.innerHTML = '';
     els.welcome.hidden = true;
     els.loadMoreWrap.hidden = true;
+    $('f-sort').value = 'newest_added';
+    els.sortSelect.value = 'newest_added';
     showStatus('Loading today’s top books & articles…');
 
     const cacheKey = 'anna.home.' + dayStr() + '.top';
@@ -333,9 +353,11 @@
       renderCards(results);
       hideStatus();
       els.loadMoreWrap.hidden = results.length < 1;
+      updateToolbar();
     } else {
       els.welcome.hidden = false;
       hideStatus();
+      updateToolbar();
     }
   }
 
@@ -410,11 +432,12 @@
   els.advancedToggle.addEventListener('click', openSheet);
   els.advancedClose.addEventListener('click', closeSheet);
   els.advancedPanel.addEventListener('click', (e) => { if (e.target === els.advancedPanel) closeSheet(); });
-  els.advancedApply.addEventListener('click', () => { closeSheet(); if (state.query) doSearch(true); });
+  els.advancedApply.addEventListener('click', () => { closeSheet(); els.sortSelect.value = $('f-sort').value; if (state.query) doSearch(true); });
   els.advancedClear.addEventListener('click', () => {
     $('f-content').value = '';
     $('f-lang').value = '';
     $('f-sort').value = '';
+    els.sortSelect.value = '';
     $('f-ext').value = '';
     $('f-year-from').value = '';
     $('f-year-to').value = '';
@@ -439,6 +462,11 @@
   });
 
   els.tabs.forEach((t) => t.addEventListener('click', () => setCategory(t.dataset.category)));
+
+  els.sortSelect.addEventListener('change', () => {
+    $('f-sort').value = els.sortSelect.value;
+    if (state.query) doSearch(true);
+  });
 
   els.loadMore.addEventListener('click', () => {
     if (state.loading) return;
