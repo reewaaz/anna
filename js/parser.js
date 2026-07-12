@@ -94,7 +94,8 @@ const Parser = (() => {
       const full = absUrl(href);
       if (seen.has(full)) continue;
       seen.add(full);
-      out.push({ label, href: full });
+      const kind = /\/slow_download\//.test(href) ? 'slow' : 'fast';
+      out.push({ label, href: full, kind });
     }
     return out;
   }

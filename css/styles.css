@@ -303,6 +303,9 @@ main { padding: 22px 18px 40px; max-width: 1280px; margin: 0 auto; }
   .dl-link::before { content: "⬇"; color: var(--primary); font-size: 15px; }
   .dl-link:hover { border-color: var(--primary); background: var(--surface-3); }
   .dl-link:active { transform: translateY(1px); }
+  .dl-link.free { border-color: rgba(52, 199, 123, 0.5); }
+  .dl-link.free::before { color: #34c77b; }
+  .dl-link.free:hover { border-color: #34c77b; background: rgba(52, 199, 123, 0.10); }
 
 /* Advanced sheet */
 .sheet {

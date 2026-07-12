@@ -306,13 +306,18 @@
 
   function renderDownloadLinks(links) {
     els.downloadsList.innerHTML = '';
-    for (const link of links) {
+    const ordered = links
+      .filter((l) => l.kind === 'slow')
+      .concat(links.filter((l) => l.kind !== 'slow'));
+    for (const link of ordered) {
       const a = document.createElement('a');
-      a.className = 'dl-link';
+      a.className = 'dl-link' + (link.kind === 'slow' ? ' free' : '');
       a.href = link.href;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
-      a.textContent = link.label;
+      a.textContent = link.kind === 'slow'
+        ? link.label.replace(/^Slow\b/i, 'Free')
+        : link.label;
       els.downloadsList.appendChild(a);
     }
   }
