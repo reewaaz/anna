@@ -4,6 +4,7 @@
   const LS_ONBOARDED = 'anna.onboarded';
   const LS_PROXY = 'anna.proxy.custom';
   const LS_INSTALL_DISMISSED = 'anna.install.dismissed';
+  const DAILY_TOPICS = ['science', 'history', 'programming', 'fiction', 'philosophy', 'art', 'mathematics'];
 
   const state = {
     query: '',
@@ -195,17 +196,48 @@
   }
 
   function goHome() {
-    state.query = '';
-    state.page = 1;
-    state.results = [];
-    els.results.innerHTML = '';
-    els.loadMoreWrap.hidden = true;
-    els.welcome.hidden = false;
-    hideStatus();
     Viewer.close();
     els.input.value = '';
     els.clearBtn.hidden = true;
-    els.input.focus();
+    attemptDefaultBrowse();
+  }
+
+  /* Front page: load today's top books/articles (cached per day). */
+  function dayStr() { return new Date().toISOString().slice(0, 10); }
+  async function attemptDefaultBrowse() {
+    const topic = DAILY_TOPICS[Math.floor(Date.now() / 86400000) % DAILY_TOPICS.length];
+    state.query = topic;
+    state.category = 'top';
+    state.page = 1;
+    state.results = [];
+    els.results.innerHTML = '';
+    els.welcome.hidden = true;
+    els.loadMoreWrap.hidden = true;
+    showStatus('Loading today’s top books & articles…');
+
+    const cacheKey = 'anna.home.' + dayStr();
+    let results;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        results = JSON.parse(cached);
+      } else {
+        results = await Search.search({ query: topic, category: 'top', sort: 'newest_added', page: 1 });
+        if (results.length) localStorage.setItem(cacheKey, JSON.stringify(results));
+      }
+    } catch (_) {
+      results = [];
+    }
+
+    if (results && results.length) {
+      state.results = results;
+      renderCards(results);
+      hideStatus();
+      els.loadMoreWrap.hidden = results.length < 1;
+    } else {
+      els.welcome.hidden = false;
+      hideStatus();
+    }
   }
 
   /* ---------- Filters sheet ---------- */
@@ -368,5 +400,6 @@
   applyProxy();
   setupInstall();
   maybeOnboard();
+  attemptDefaultBrowse();
   Viewer.init();
 })();
