@@ -42,6 +42,13 @@
     viewGrid: $('view-grid'),
     viewList: $('view-list'),
     themeToggle: $('theme-toggle'),
+    downloads: $('downloads'),
+    downloadsTitle: $('downloads-title'),
+    downloadsSub: $('downloads-sub'),
+    downloadsList: $('downloads-list'),
+    downloadsStatus: $('downloads-status'),
+    downloadsClose: $('downloads-close'),
+    downloadsPage: $('downloads-page'),
     onboard: $('onboard'),
     onboardClose: $('onboard-close'),
     onboardInstall: $('onboard-install'),
@@ -140,7 +147,7 @@
       card.appendChild(coverEl);
       card.appendChild(body);
 
-      const open = () => Viewer.open(r.href, r.title);
+      const open = () => openDownloads(r);
       card.addEventListener('click', open);
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
@@ -247,6 +254,52 @@
     els.clearBtn.hidden = true;
     attemptDefaultBrowse();
   }
+
+  /* ---------- Downloads ---------- */
+  function showDownloadsStatus(msg, isError) {
+    els.downloadsStatus.hidden = false;
+    els.downloadsStatus.textContent = msg;
+    els.downloadsStatus.classList.toggle('error', !!isError);
+  }
+  function hideDownloadsStatus() { els.downloadsStatus.hidden = true; }
+
+  async function openDownloads(r) {
+    els.downloads.hidden = false;
+    els.downloadsTitle.textContent = r.title || 'Downloads';
+    els.downloadsSub.textContent = [r.authors, r.ext && r.ext.toUpperCase(), r.size, r.year]
+      .filter(Boolean).join('  ·  ');
+    els.downloadsList.innerHTML = '';
+    els.downloadsPage.href = r.href || '#';
+    showDownloadsStatus('Loading download links…');
+
+    try {
+      const url = Search.proxiedUrl(r.href);
+      const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      const links = Parser.parseDownloads(text);
+      if (!links.length) throw new Error('No download links found');
+      renderDownloadLinks(links);
+      hideDownloadsStatus();
+    } catch (_) {
+      showDownloadsStatus('Could not load download links. The proxy may be busy — try again, or use “Open on Anna’s”.', true);
+    }
+  }
+
+  function renderDownloadLinks(links) {
+    els.downloadsList.innerHTML = '';
+    for (const link of links) {
+      const a = document.createElement('a');
+      a.className = 'dl-link';
+      a.href = link.href;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = link.label;
+      els.downloadsList.appendChild(a);
+    }
+  }
+
+  function closeDownloads() { els.downloads.hidden = true; }
 
   /* Front page: load today's top books & articles (cached per day). */
   function dayStr() { return new Date().toISOString().slice(0, 10); }
@@ -416,9 +469,12 @@
   function closeSettings() { els.settings.hidden = true; }
   els.settingsClose.addEventListener('click', closeSettings);
   els.settings.addEventListener('click', (e) => { if (e.target === els.settings) closeSettings(); });
+  els.downloadsClose.addEventListener('click', closeDownloads);
+  els.downloads.addEventListener('click', (e) => { if (e.target === els.downloads) closeDownloads(); });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (!els.settings.hidden) closeSettings();
+      else if (!els.downloads.hidden) closeDownloads();
       else if (!els.advancedPanel.hidden) closeSheet();
       else if (!els.onboard.hidden) els.onboard.hidden = true;
     }

@@ -82,5 +82,22 @@ const Parser = (() => {
     return out;
   }
 
-  return { parse };
+  function parseDownloads(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const anchors = Array.from(doc.querySelectorAll('a.js-download-link'));
+    const out = [];
+    const seen = new Set();
+    for (const a of anchors) {
+      const href = a.getAttribute('href');
+      if (!href) continue;
+      const label = clean(a.textContent) || 'Download';
+      const full = absUrl(href);
+      if (seen.has(full)) continue;
+      seen.add(full);
+      out.push({ label, href: full });
+    }
+    return out;
+  }
+
+  return { parse, parseDownloads };
 })();
