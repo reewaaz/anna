@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1115" />
+  <title>Anna — Archive Search</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="28" height="28" />
+      <span>Anna</span>
+    </div>
+
+    <form id="search-form" class="search-form" autocomplete="off">
+      <input
+        id="search-input"
+        class="search-input"
+        type="search"
+        placeholder="Search Anna's Archive…"
+        aria-label="Search query"
+        required
+      />
+      <button type="submit" class="btn primary">Search</button>
+      <button type="button" id="advanced-toggle" class="btn ghost" aria-expanded="false">Filters</button>
+    </form>
+
+    <button id="settings-toggle" class="btn ghost icon-btn" title="Settings" aria-label="Settings">⚙</button>
+  </header>
+
+  <section id="advanced-panel" class="advanced-panel" hidden>
+    <div class="filters">
+      <label>Content
+        <select id="f-content">
+          <option value="">Any</option>
+          <option value="book_any">Books</option>
+          <option value="book_fiction">Fiction</option>
+          <option value="book_nonfiction">Non-fiction</option>
+          <option value="book_comic">Comic</option>
+          <option value="journal_article">Journal article</option>
+          <option value="magazine">Magazine</option>
+          <option value="standards_document">Standards</option>
+        </select>
+      </label>
+      <label>Language
+        <input id="f-lang" type="text" placeholder="e.g. en" />
+      </label>
+      <label>Extension
+        <input id="f-ext" type="text" placeholder="pdf, epub…" />
+      </label>
+      <label>Sort
+        <select id="f-sort">
+          <option value="">Relevance</option>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="largest">Largest</option>
+          <option value="smallest">Smallest</option>
+          <option value="newest_added">Newest added</option>
+          <option value="oldest_added">Oldest added</option>
+          <option value="random">Random</option>
+        </select>
+      </label>
+      <label>Year from
+        <input id="f-year-from" type="number" min="0" placeholder="e.g. 2010" />
+      </label>
+      <label>Year to
+        <input id="f-year-to" type="number" min="0" placeholder="e.g. 2024" />
+      </label>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-category="top" role="tab">Top Links</button>
+    <button class="tab" data-category="book_any" role="tab">Books</button>
+    <button class="tab" data-category="article" role="tab">Articles</button>
+  </nav>
+
+  <main>
+    <div id="status" class="status" hidden></div>
+    <div id="results" class="results-grid" aria-live="polite"></div>
+    <div id="load-more-wrap" class="load-more-wrap" hidden>
+      <button id="load-more" class="btn ghost">Load more</button>
+    </div>
+  </main>
+
+  <!-- Viewer modal -->
+  <div id="viewer" class="viewer" hidden>
+    <div class="viewer-bar">
+      <span id="viewer-title" class="viewer-title">Viewer</span>
+      <div class="viewer-actions">
+        <button id="viewer-external" class="btn ghost" title="Open in browser">↗ Browser</button>
+        <button id="viewer-close" class="btn ghost" title="Close">✕</button>
+      </div>
+    </div>
+    <iframe id="viewer-frame" class="viewer-frame" title="Content viewer" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    <div id="viewer-fallback" class="viewer-fallback" hidden>
+      <p>This site can't be displayed inside the app (frame blocked).</p>
+      <a id="viewer-fallback-link" class="btn primary" href="#" target="_blank" rel="noopener">Open in your browser</a>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="settings" class="modal" hidden>
+    <div class="modal-card">
+      <h2>Settings</h2>
+      <label class="block">CORS proxy
+        <select id="s-proxy">
+          <option value="https://api.allorigins.win/raw?url=">allorigins.win</option>
+          <option value="https://corsproxy.io/?url=">corsproxy.io</option>
+          <option value="https://api.codetabs.com/v1/proxy/?quest=">codetabs.com</option>
+        </select>
+      </label>
+      <label class="block">Custom proxy (overrides above)
+        <input id="s-proxy-custom" type="text" placeholder="https://your-proxy/?url=" />
+      </label>
+      <p class="hint">Public proxies can be rate-limited by Anna's Archive's bot protection. For reliability, deploy your own proxy (see README).</p>
+      <div class="modal-actions">
+        <button id="settings-save" class="btn primary">Save</button>
+        <button id="settings-close" class="btn ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/search.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/viewer.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
