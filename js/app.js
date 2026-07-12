@@ -218,8 +218,8 @@
       els.loadMoreWrap.hidden = results.length < 1;
       updateToolbar();
     } catch (err) {
-      showStatus('Search failed. The proxy Worker (anna.riwaj-p.workers.dev) may be down or not deployed yet. ' +
-        'Deploy it with: cd worker && wrangler deploy  (see worker/README).', true);
+      showStatus('Search failed. The proxy Worker (anna-proxy.riwaj-p.workers.dev) may be down or not deployed yet. ' +
+        'Deploy it with: cd worker && wrangler deploy', true);
     } finally {
       state.loading = false;
     }

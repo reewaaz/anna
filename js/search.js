@@ -3,7 +3,7 @@
 const AA_BASE = 'https://annas-archive.gl/search';
 
 const DEFAULT_PROXIES = [
-  'https://anna.riwaj-p.workers.dev/?url='
+  'https://anna-proxy.riwaj-p.workers.dev/?url='
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
