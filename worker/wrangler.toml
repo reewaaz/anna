@@ -1,7 +1,12 @@
-name = "anna-proxy"
+name = "anna"
 main = "worker.js"
 compatibility_date = "2024-09-23"
 
-# Deploy with: wrangler deploy
-# Then paste the returned https://<name>.<subdomain>.workers.dev/?url=
-# into the app's Settings → Custom proxy.
+# Deploy with:  wrangler deploy
+# This turns https://anna.riwaj-p.workers.dev/ into the proxy.
+# Usage: https://anna.riwaj-p.workers.dev/?url=<encoded-anna-url>
+# Paste that into the app's Settings → Custom proxy (it is the default).
+#
+# Note: the Anna web app itself is hosted on GitHub Pages
+# (https://reewaaz.github.io/anna/), so redeploying this Worker as "anna"
+# only changes the proxy — it does not affect the app.

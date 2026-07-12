@@ -193,8 +193,8 @@
       renderCards(results);
       els.loadMoreWrap.hidden = results.length < 1;
     } catch (err) {
-      showStatus('Search failed: public proxies are rate-limited by Anna’s bot protection. ' +
-        'For reliable search, deploy the free Cloudflare Worker in worker/ (see README) and paste its URL in Settings → Custom proxy.', true);
+      showStatus('Search failed. The proxy Worker (anna.riwaj-p.workers.dev) may be down or not deployed yet. ' +
+        'Deploy it with: cd worker && wrangler deploy  (see worker/README).', true);
     } finally {
       state.loading = false;
     }
@@ -248,26 +248,27 @@
     attemptDefaultBrowse();
   }
 
-  /* Front page: load today's top books/articles (cached per day). */
+  /* Front page: load today's top books & articles (cached per day). */
   function dayStr() { return new Date().toISOString().slice(0, 10); }
   async function attemptDefaultBrowse() {
     const topic = DAILY_TOPICS[Math.floor(Date.now() / 86400000) % DAILY_TOPICS.length];
     state.query = topic;
+    state.category = 'top';
     state.page = 1;
     state.results = [];
     els.results.innerHTML = '';
     els.welcome.hidden = true;
     els.loadMoreWrap.hidden = true;
-    showStatus('Loading today’s top results…');
+    showStatus('Loading today’s top books & articles…');
 
-    const cacheKey = 'anna.home.' + dayStr() + '.' + state.category;
+    const cacheKey = 'anna.home.' + dayStr() + '.top';
     let results;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         results = JSON.parse(cached);
       } else {
-        results = await Search.search({ query: topic, category: state.category, sort: 'newest_added', page: 1 });
+        results = await Search.search({ query: topic, category: 'top', sort: 'newest_added', page: 1 });
         if (results.length) localStorage.setItem(cacheKey, JSON.stringify(results));
       }
     } catch (_) {
