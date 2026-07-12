@@ -16,6 +16,9 @@
     loading: false
   };
 
+  let currentItem = null;
+  let currentItemHtml = '';
+
   const $ = (id) => document.getElementById(id);
   const els = {
     form: $('search-form'),
@@ -52,6 +55,9 @@
     downloadsStatus: $('downloads-status'),
     downloadsClose: $('downloads-close'),
     downloadsPage: $('downloads-page'),
+    downloadsDescBtn: $('downloads-desc-btn'),
+    downloadsDesc: $('downloads-desc'),
+    typeSelect: $('type-select'),
     toast: $('toast'),
     onboard: $('onboard'),
     onboardClose: $('onboard-close'),
@@ -166,6 +172,17 @@
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });
+
+      const info = document.createElement('button');
+      info.type = 'button';
+      info.className = 'card-info';
+      info.setAttribute('aria-label', 'Details');
+      info.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2Zm0-8h-2V7h2Z"/></svg>';
+      info.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDownloads(r);
+      });
+      card.appendChild(info);
 
       els.results.appendChild(card);
     }
@@ -345,11 +362,15 @@
   function hideDownloadsStatus() { els.downloadsStatus.hidden = true; }
 
   async function openDownloads(r) {
+    currentItem = r;
+    currentItemHtml = '';
     els.downloads.hidden = false;
     els.downloadsTitle.textContent = r.title || 'Downloads';
     els.downloadsSub.textContent = [r.type, r.authors, r.ext && r.ext.toUpperCase(), r.size, r.year]
       .filter(Boolean).join('  ·  ');
     els.downloadsList.innerHTML = '';
+    els.downloadsDesc.hidden = true;
+    els.downloadsDesc.textContent = '';
     els.downloadsPage.href = r.href || '#';
     showDownloadsStatus('Loading download links…');
 
@@ -358,12 +379,32 @@
       const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();
+      currentItemHtml = text;
       const links = Parser.parseDownloads(text);
       if (!links.length) throw new Error('No download links found');
       renderDownloadLinks(links);
       hideDownloadsStatus();
     } catch (_) {
       showDownloadsStatus('Could not load download links. The proxy may be busy — try again, or use “Open on Anna’s”.', true);
+    }
+  }
+
+  async function showDescription() {
+    if (!currentItem) return;
+    els.downloadsDesc.hidden = false;
+    els.downloadsDesc.textContent = 'Loading description…';
+    try {
+      let html = currentItemHtml;
+      if (!html) {
+        const res = await fetch(Search.proxiedUrl(currentItem.href), { headers: { 'Accept': 'text/html' } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        html = await res.text();
+        currentItemHtml = html;
+      }
+      const desc = Parser.parseDescription(html);
+      els.downloadsDesc.textContent = desc || 'No description available.';
+    } catch (_) {
+      els.downloadsDesc.textContent = 'Could not load the description.';
     }
   }
 
@@ -535,6 +576,13 @@
     $('f-sort').value = els.sortSelect.value;
     if (state.query) doSearch(true);
   });
+
+  els.typeSelect.addEventListener('change', () => {
+    $('f-ext').value = els.typeSelect.value;
+    if (state.query) doSearch(true);
+  });
+
+  els.downloadsDescBtn.addEventListener('click', showDescription);
 
   els.loadMore.addEventListener('click', () => {
     if (state.loading) return;

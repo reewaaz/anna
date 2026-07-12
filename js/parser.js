@@ -100,5 +100,15 @@ const Parser = (() => {
     return out;
   }
 
-  return { parse, parseDownloads };
+  function parseDescription(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrap = doc.querySelector('div.description') || doc.querySelector('[class*="description"]');
+    if (!wrap) return '';
+    // The actual text sits in the .mb-1 div (after the "description" label).
+    const content = wrap.querySelector('.mb-1') || wrap.querySelector('.text-gray-800') || wrap;
+    let text = clean(content.textContent).replace(/^description/i, '').trim();
+    return text;
+  }
+
+  return { parse, parseDownloads, parseDescription };
 })();

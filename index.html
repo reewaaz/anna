@@ -110,7 +110,7 @@
       <span>Fiction</span>
     </button>
     <button class="tab" data-category="nonfiction" role="tab">
-      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h6a2 2 0 0 1 2 2v14H7a2 2 0 0 0-2 2V4Zm14 0h-6v18h6a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/></svg>
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm5-1 2.4 1.8L16.8 10V3h-4.8Z"/></svg>
       <span>Non-fiction</span>
     </button>
     <button class="tab" data-category="article" role="tab">
@@ -120,10 +120,6 @@
     <button class="tab" data-category="magazine" role="tab">
       <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm1 2v6h12V5H6Zm0 9h8v1.5H6V14Zm0 3h12v1.5H6V17Z"/></svg>
       <span>Magazines</span>
-    </button>
-    <button class="tab" data-category="standards" role="tab">
-      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2Zm8 1.5V8h4.5L14 3.5ZM8 12l1.6 1.6L13 10l1 1-4.4 4.4L7 13l1-1Z"/></svg>
-      <span>Standards</span>
     </button>
   </nav>
 
@@ -239,11 +235,6 @@
             <b>Magazines</b>
             <span>Issues &amp; periodicals</span>
           </button>
-          <button class="wcat" data-category="standards">
-            <span class="wcat-ic">📐</span>
-            <b>Standards</b>
-            <span>Technical &amp; legal standards</span>
-          </button>
         </div>
         <p class="hint">Tip: tap a category, then type your query. Use Filters for power search.</p>
       </div>
@@ -251,18 +242,31 @@
     <div id="status" class="status" hidden></div>
     <div id="results-toolbar" class="results-toolbar" hidden>
       <span id="results-count" class="results-count"></span>
-      <label class="sort-wrap">Sort
-        <select id="sort-select">
-          <option value="">Relevance</option>
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="largest">Largest</option>
-          <option value="smallest">Smallest</option>
-          <option value="newest_added">Newest added</option>
-          <option value="oldest_added">Oldest added</option>
-          <option value="random">Random</option>
-        </select>
-      </label>
+      <div class="toolbar-controls">
+        <label class="sort-wrap">Type
+          <select id="type-select">
+            <option value="">Any</option>
+            <option value="pdf">PDF</option>
+            <option value="epub">EPUB</option>
+            <option value="mobi">MOBI</option>
+            <option value="djvu">DJVU</option>
+            <option value="txt">TXT</option>
+            <option value="cbz">CBZ</option>
+          </select>
+        </label>
+        <label class="sort-wrap">Sort
+          <select id="sort-select">
+            <option value="">Relevance</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="largest">Largest</option>
+            <option value="smallest">Smallest</option>
+            <option value="newest_added">Newest added</option>
+            <option value="oldest_added">Oldest added</option>
+            <option value="random">Random</option>
+          </select>
+        </label>
+      </div>
     </div>
     <div id="results" class="results-grid" aria-live="polite"></div>
     <div id="load-more-wrap" class="load-more-wrap" hidden>
@@ -295,8 +299,10 @@
       </div>
       <p class="hint" id="downloads-sub"></p>
       <div id="downloads-status" class="status" hidden></div>
+      <div id="downloads-desc" class="downloads-desc" hidden></div>
       <div id="downloads-list" class="downloads-list"></div>
       <div class="modal-actions">
+        <button id="downloads-desc-btn" class="btn ghost" type="button">Description</button>
         <a id="downloads-page" class="btn ghost" href="#" target="_blank" rel="noopener">Open on Anna’s ↗</a>
       </div>
     </div>
