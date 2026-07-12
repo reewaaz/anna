@@ -1,0 +1,8 @@
+# Build / dependency caches
+.wrangler/
+node_modules/
+*.log
+
+# Credentials / local secrets
+.env
+cloudflare-api-token.txt
