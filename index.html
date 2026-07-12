@@ -11,26 +11,34 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="icons/icon.svg" alt="" width="28" height="28" />
-      <span>Anna</span>
+  <header class="app-header">
+    <div class="topbar">
+      <div class="brand" id="brand" role="button" tabindex="0" title="Home" aria-label="Home">
+        <img src="icons/icon.svg" alt="" width="28" height="28" />
+        <span>Anna</span>
+      </div>
+
+      <form id="search-form" class="search-form" autocomplete="off">
+        <input
+          id="search-input"
+          class="search-input"
+          type="search"
+          placeholder="Search Anna's Archive…"
+          aria-label="Search query"
+          required
+        />
+        <button type="submit" class="btn primary">Search</button>
+        <button type="button" id="advanced-toggle" class="btn ghost" aria-expanded="false">Filters</button>
+      </form>
+
+      <button id="settings-toggle" class="btn ghost icon-btn" title="Settings" aria-label="Settings">⚙</button>
     </div>
 
-    <form id="search-form" class="search-form" autocomplete="off">
-      <input
-        id="search-input"
-        class="search-input"
-        type="search"
-        placeholder="Search Anna's Archive…"
-        aria-label="Search query"
-        required
-      />
-      <button type="submit" class="btn primary">Search</button>
-      <button type="button" id="advanced-toggle" class="btn ghost" aria-expanded="false">Filters</button>
-    </form>
-
-    <button id="settings-toggle" class="btn ghost icon-btn" title="Settings" aria-label="Settings">⚙</button>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-category="top" role="tab">Top Links</button>
+      <button class="tab" data-category="book_any" role="tab">Books</button>
+      <button class="tab" data-category="article" role="tab">Articles</button>
+    </nav>
   </header>
 
   <section id="advanced-panel" class="advanced-panel" hidden>
@@ -74,13 +82,17 @@
     </div>
   </section>
 
-  <nav class="tabs" role="tablist">
-    <button class="tab active" data-category="top" role="tab">Top Links</button>
-    <button class="tab" data-category="book_any" role="tab">Books</button>
-    <button class="tab" data-category="article" role="tab">Articles</button>
-  </nav>
-
   <main>
+    <div id="welcome" class="welcome">
+      <h1>Anna</h1>
+      <p>Search Anna's Archive for books, articles, and more — right in your browser.</p>
+      <div class="welcome-cats">
+        <div><b>Top Links</b><span>Best matches across everything</span></div>
+        <div><b>Books</b><span>Books only</span></div>
+        <div><b>Articles</b><span>Journals, magazines, standards</span></div>
+      </div>
+      <p class="hint">Type a query above and press Search, then use the tabs to filter. Tap the Anna logo anytime to return home.</p>
+    </div>
     <div id="status" class="status" hidden></div>
     <div id="results" class="results-grid" aria-live="polite"></div>
     <div id="load-more-wrap" class="load-more-wrap" hidden>

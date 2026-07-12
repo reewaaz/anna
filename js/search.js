@@ -145,5 +145,16 @@ const Search = (() => {
     return merged;
   }
 
-  return { setProxies, setFallback, search, buildUrl, categoryToContent, detectWorkingProxy, DEFAULT_PROXIES };
+  function getPrimaryProxy() {
+    return proxies[0] || '';
+  }
+
+  function proxiedUrl(target) {
+    const p = getPrimaryProxy();
+    if (!p) return target;
+    const sep = p.includes('?') ? '' : '?url=';
+    return p + sep + encodeURIComponent(target);
+  }
+
+  return { setProxies, setFallback, search, buildUrl, categoryToContent, detectWorkingProxy, getPrimaryProxy, proxiedUrl, DEFAULT_PROXIES };
 })();

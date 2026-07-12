@@ -27,16 +27,20 @@ html, body {
 
 a { color: var(--accent); }
 
-.topbar {
+.app-header {
   position: sticky;
   top: 0;
   z-index: 20;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  padding-top: env(safe-area-inset-top);
+}
+
+.topbar {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: var(--bg-elev);
-  border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
 
@@ -47,7 +51,13 @@ a { color: var(--accent); }
   font-weight: 700;
   font-size: 18px;
   letter-spacing: 0.3px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 6px;
+  border-radius: 8px;
 }
+.brand:hover { background: var(--bg-elev2); }
+.brand:active { transform: translateY(1px); }
 .brand img { border-radius: 6px; }
 
 .search-form {
@@ -116,25 +126,51 @@ a { color: var(--accent); }
 .tabs {
   display: flex;
   gap: 4px;
-  padding: 10px 14px 0;
-  position: sticky;
-  top: 57px;
-  background: var(--bg);
-  z-index: 10;
+  padding: 4px 14px 0;
+  background: var(--bg-elev);
   border-bottom: 1px solid var(--border);
+  overflow-x: auto;
 }
 .tab {
   background: transparent;
   border: none;
   color: var(--text-dim);
-  padding: 10px 14px;
+  padding: 12px 16px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
+  white-space: nowrap;
   border-bottom: 2px solid transparent;
 }
 .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
 
-main { padding: 14px; max-width: 1200px; margin: 0 auto; }
+main { padding: 14px; max-width: 1200px; margin: 0 auto; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+
+.welcome {
+  text-align: center;
+  padding: 28px 16px 12px;
+  color: var(--text-dim);
+}
+.welcome h1 { font-size: 30px; margin: 0 0 8px; color: var(--text); letter-spacing: 0.5px; }
+.welcome p { margin: 6px 0; line-height: 1.5; }
+.welcome-cats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 18px 0;
+}
+.welcome-cats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  min-width: 130px;
+}
+.welcome-cats b { color: var(--text); font-size: 15px; }
+.welcome-cats span { font-size: 12px; }
 
 .status {
   padding: 14px;
@@ -145,7 +181,7 @@ main { padding: 14px; max-width: 1200px; margin: 0 auto; }
 
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 14px;
 }
 
@@ -247,5 +283,9 @@ main { padding: 14px; max-width: 1200px; margin: 0 auto; }
 @media (max-width: 520px) {
   .topbar { gap: 8px; }
   .search-form { order: 3; flex-basis: 100%; }
-  .tabs { top: 105px; }
+  .search-input { font-size: 16px; padding: 12px; }
+  .btn { padding: 12px 14px; font-size: 15px; }
+  .results-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .welcome h1 { font-size: 26px; }
+  .viewer-title { max-width: 60%; }
 }

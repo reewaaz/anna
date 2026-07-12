@@ -28,7 +28,10 @@ const Viewer = (() => {
     titleEl.textContent = title || 'Viewer';
     fallback.hidden = true;
     document.getElementById('viewer').hidden = false;
-    frame.src = url;
+
+    // Load through the proxy so Anna's X-Frame-Options doesn't block framing.
+    const proxied = (typeof Search !== 'undefined' && Search.proxiedUrl) ? Search.proxiedUrl(url) : url;
+    frame.src = proxied;
 
     // Heuristic: if nothing renders within a few seconds, offer the browser.
     clearTimeout(loadTimer);

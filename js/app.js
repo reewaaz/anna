@@ -16,6 +16,7 @@
     advancedPanel: document.getElementById('advanced-panel'),
     tabs: Array.from(document.querySelectorAll('.tab')),
     results: document.getElementById('results'),
+    welcome: document.getElementById('welcome'),
     status: document.getElementById('status'),
     loadMoreWrap: document.getElementById('load-more-wrap'),
     loadMore: document.getElementById('load-more'),
@@ -139,6 +140,7 @@
       state.page = 1;
       state.results = [];
       els.results.innerHTML = '';
+      els.welcome.hidden = true;
       els.loadMoreWrap.hidden = true;
     }
     state.loading = true;
@@ -177,6 +179,20 @@
     state.category = cat;
     els.tabs.forEach((t) => t.classList.toggle('active', t.dataset.category === cat));
     if (state.query) doSearch(true);
+    else showStatus('Enter a search above, then use these tabs to filter results.', false);
+  }
+
+  function goHome() {
+    state.query = '';
+    state.page = 1;
+    state.results = [];
+    els.results.innerHTML = '';
+    els.loadMoreWrap.hidden = true;
+    els.welcome.hidden = false;
+    hideStatus();
+    Viewer.close();
+    els.input.value = '';
+    els.input.focus();
   }
 
   // Events
@@ -225,6 +241,13 @@
     els.sProxyCustom.value = '';
     applyProxy();
     closeSettings();
+  });
+
+  // Brand / logo → return home.
+  const brand = document.getElementById('brand');
+  brand.addEventListener('click', goHome);
+  brand.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goHome(); }
   });
 
   applyProxy();
