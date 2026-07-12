@@ -1,6 +1,10 @@
-/* app.js — UI wiring: search, tabs, filters, settings, results, viewer. */
+/* app.js — UI wiring: search, pill nav, filters sheet, onboarding, install. */
 
 (() => {
+  const LS_ONBOARDED = 'anna.onboarded';
+  const LS_PROXY = 'anna.proxy.custom';
+  const LS_INSTALL_DISMISSED = 'anna.install.dismissed';
+
   const state = {
     query: '',
     category: 'top',
@@ -9,60 +13,64 @@
     loading: false
   };
 
+  const $ = (id) => document.getElementById(id);
   const els = {
-    form: document.getElementById('search-form'),
-    input: document.getElementById('search-input'),
-    advancedToggle: document.getElementById('advanced-toggle'),
-    advancedPanel: document.getElementById('advanced-panel'),
-    tabs: Array.from(document.querySelectorAll('.tab')),
-    results: document.getElementById('results'),
-    welcome: document.getElementById('welcome'),
-    status: document.getElementById('status'),
-    loadMoreWrap: document.getElementById('load-more-wrap'),
-    loadMore: document.getElementById('load-more'),
-    settingsToggle: document.getElementById('settings-toggle'),
-    settings: document.getElementById('settings'),
-    settingsSave: document.getElementById('settings-save'),
-    settingsClose: document.getElementById('settings-close'),
-    sProxy: document.getElementById('s-proxy'),
-    sProxyCustom: document.getElementById('s-proxy-custom')
+    form: $('search-form'),
+    input: $('search-input'),
+    clearBtn: $('clear-btn'),
+    advancedToggle: $('advanced-toggle'),
+    advancedPanel: $('advanced-panel'),
+    advancedClose: $('advanced-close'),
+    advancedClear: $('advanced-clear'),
+    advancedApply: $('advanced-apply'),
+    presets: $('presets'),
+    extChips: $('ext-chips'),
+    tabs: Array.from(document.querySelectorAll('.cat-nav .tab')),
+    results: $('results'),
+    welcome: $('welcome'),
+    status: $('status'),
+    loadMoreWrap: $('load-more-wrap'),
+    loadMore: $('load-more'),
+    settingsToggle: $('settings-toggle'),
+    settings: $('settings'),
+    settingsSave: $('settings-save'),
+    settingsClose: $('settings-close'),
+    sProxyCustom: $('s-proxy-custom'),
+    onboard: $('onboard'),
+    onboardClose: $('onboard-close'),
+    onboardInstall: $('onboard-install'),
+    installBanner: $('install-banner'),
+    ibInstall: $('ib-install'),
+    ibDismiss: $('ib-dismiss'),
+    installBtn: $('install-btn')
   };
 
-  const LS_PROXY = 'anna.proxy.custom';
+  let deferredPrompt = null;
 
   function showStatus(msg, isError) {
     els.status.hidden = false;
     els.status.textContent = msg;
     els.status.classList.toggle('error', !!isError);
   }
-  function hideStatus() {
-    els.status.hidden = true;
-  }
+  function hideStatus() { els.status.hidden = true; }
 
   function currentFilters() {
     return {
-      lang: document.getElementById('f-lang').value.trim(),
-      ext: document.getElementById('f-ext').value.trim(),
-      sort: document.getElementById('f-sort').value,
-      yearFrom: document.getElementById('f-year-from').value.trim(),
-      yearTo: document.getElementById('f-year-to').value.trim()
+      lang: $('f-lang').value.trim(),
+      ext: $('f-ext').value.trim(),
+      sort: $('f-sort').value,
+      yearFrom: $('f-year-from').value.trim(),
+      yearTo: $('f-year-to').value.trim()
     };
   }
 
   function applyProxy() {
     const custom = (localStorage.getItem(LS_PROXY) || '').trim();
-    // A personal/custom proxy (e.g. your Cloudflare Worker) is always the
-    // last-resort fallback. The chosen primary is automatic.
     Search.setFallback(custom);
-
     if (custom) {
-      // User override: use it first, then the public list.
       Search.setProxies([custom, ...Search.DEFAULT_PROXIES]);
       return;
     }
-
-    // No override → start with the default list (cors.lol first) and
-    // silently probe for a working proxy, reordering without any UI prompt.
     Search.setProxies([...Search.DEFAULT_PROXIES]);
     Search.detectWorkingProxy().then((best) => {
       if (best && best !== Search.DEFAULT_PROXIES[0]) {
@@ -77,19 +85,17 @@
       card.className = 'card';
       card.tabIndex = 0;
 
-      const cover = document.createElement(r.cover ? 'img' : 'div');
+      let coverEl;
       if (r.cover) {
-        cover.className = 'cover';
-        cover.loading = 'lazy';
-        cover.referrerPolicy = 'no-referrer';
-        cover.src = r.cover;
-        cover.alt = r.title;
-        cover.onerror = () => {
-          cover.replaceWith(makeMissingCover(r.title));
-        };
+        coverEl = document.createElement('img');
+        coverEl.className = 'cover';
+        coverEl.loading = 'lazy';
+        coverEl.referrerPolicy = 'no-referrer';
+        coverEl.src = r.cover;
+        coverEl.alt = r.title;
+        coverEl.onerror = () => coverEl.replaceWith(makeMissingCover(r.title));
       } else {
-        cover.replaceWith(makeMissingCover(r.title));
-        continue;
+        coverEl = makeMissingCover(r.title);
       }
 
       const body = document.createElement('div');
@@ -101,18 +107,24 @@
 
       const meta = document.createElement('div');
       meta.className = 'meta';
-      const badges = [r.ext && r.ext.toUpperCase(), r.size, r.year, r.authors && r.authors.slice(0, 40)];
+      const badges = [
+        r.ext && r.ext.toUpperCase(),
+        r.size,
+        r.year,
+        r.lang && r.lang.toUpperCase(),
+        r.type
+      ];
       for (const b of badges) {
         if (!b) continue;
         const span = document.createElement('span');
-        span.className = 'badge';
+        span.className = 'badge' + (b === r.ext.toUpperCase() ? ' accent' : '');
         span.textContent = b;
         meta.appendChild(span);
       }
 
       body.appendChild(title);
       if (meta.children.length) body.appendChild(meta);
-      card.appendChild(cover);
+      card.appendChild(coverEl);
       card.appendChild(body);
 
       const open = () => Viewer.open(r.href, r.title);
@@ -128,7 +140,7 @@
   function makeMissingCover(title) {
     const div = document.createElement('div');
     div.className = 'cover missing';
-    div.textContent = (title || 'No cover').slice(0, 24);
+    div.textContent = (title || 'No cover').slice(0, 28);
     return div;
   }
 
@@ -179,7 +191,7 @@
     state.category = cat;
     els.tabs.forEach((t) => t.classList.toggle('active', t.dataset.category === cat));
     if (state.query) doSearch(true);
-    else showStatus('Enter a search above, then use these tabs to filter results.', false);
+    else showStatus('Type a search above, then use these tabs to filter.', false);
   }
 
   function goHome() {
@@ -192,24 +204,110 @@
     hideStatus();
     Viewer.close();
     els.input.value = '';
+    els.clearBtn.hidden = true;
     els.input.focus();
   }
 
-  // Events
+  /* ---------- Filters sheet ---------- */
+  function openSheet() {
+    els.advancedPanel.hidden = false;
+    els.advancedToggle.setAttribute('aria-expanded', 'true');
+  }
+  function closeSheet() {
+    els.advancedPanel.hidden = true;
+    els.advancedToggle.setAttribute('aria-expanded', 'false');
+  }
+
+  /* ---------- Install prompt ---------- */
+  function setupInstall() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      els.installBtn.hidden = false;
+      if (!localStorage.getItem(LS_INSTALL_DISMISSED) && !localStorage.getItem(LS_ONBOARDED)) {
+        // shown via onboarding instead
+      } else if (!localStorage.getItem(LS_INSTALL_DISMISSED)) {
+        els.installBanner.hidden = false;
+      }
+      els.onboardInstall.hidden = false;
+    });
+
+    const promptInstall = async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      els.installBtn.hidden = true;
+      els.installBanner.hidden = true;
+      els.onboardInstall.hidden = true;
+    };
+    els.installBtn.addEventListener('click', promptInstall);
+    els.ibInstall.addEventListener('click', promptInstall);
+    els.onboardInstall.addEventListener('click', promptInstall);
+    els.ibDismiss.addEventListener('click', () => {
+      els.installBanner.hidden = true;
+      localStorage.setItem(LS_INSTALL_DISMISSED, '1');
+    });
+    window.addEventListener('appinstalled', () => {
+      els.installBtn.hidden = true;
+      els.installBanner.hidden = true;
+    });
+  }
+
+  /* ---------- Onboarding ---------- */
+  function maybeOnboard() {
+    if (!localStorage.getItem(LS_ONBOARDED)) {
+      els.onboard.hidden = false;
+    }
+  }
+
+  /* ---------- Wire events ---------- */
   els.form.addEventListener('submit', (e) => {
     e.preventDefault();
     doSearch(true);
   });
 
-  els.advancedToggle.addEventListener('click', () => {
-    const open = els.advancedPanel.hidden;
-    els.advancedPanel.hidden = !open;
-    els.advancedToggle.setAttribute('aria-expanded', String(open));
+  els.input.addEventListener('input', () => {
+    els.clearBtn.hidden = els.input.value.length === 0;
+  });
+  els.clearBtn.addEventListener('click', () => {
+    els.input.value = '';
+    els.clearBtn.hidden = true;
+    els.input.focus();
   });
 
-  els.tabs.forEach((t) => {
-    t.addEventListener('click', () => setCategory(t.dataset.category));
+  els.advancedToggle.addEventListener('click', openSheet);
+  els.advancedClose.addEventListener('click', closeSheet);
+  els.advancedPanel.addEventListener('click', (e) => { if (e.target === els.advancedPanel) closeSheet(); });
+  els.advancedApply.addEventListener('click', () => { closeSheet(); if (state.query) doSearch(true); });
+  els.advancedClear.addEventListener('click', () => {
+    $('f-content').value = '';
+    $('f-lang').value = '';
+    $('f-sort').value = '';
+    $('f-ext').value = '';
+    $('f-year-from').value = '';
+    $('f-year-to').value = '';
+    els.presets.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
+    els.extChips.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
   });
+
+  els.presets.addEventListener('click', (e) => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    $('f-content').value = btn.dataset.content;
+    els.presets.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === btn));
+    if (state.query) doSearch(true);
+  });
+
+  els.extChips.addEventListener('click', (e) => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    btn.classList.toggle('active');
+    const sel = Array.from(els.extChips.querySelectorAll('.chip.active')).map((c) => c.dataset.ext);
+    $('f-ext').value = sel.join(',');
+  });
+
+  els.tabs.forEach((t) => t.addEventListener('click', () => setCategory(t.dataset.category)));
 
   els.loadMore.addEventListener('click', () => {
     if (state.loading) return;
@@ -217,7 +315,22 @@
     doSearch(false);
   });
 
-  // Settings — OPTIONAL. Never shown automatically; only via the gear.
+  // Brand / logo → home
+  const brand = $('brand');
+  brand.addEventListener('click', goHome);
+  brand.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goHome(); }
+  });
+
+  // Welcome category cards → set category + focus search
+  els.welcome.querySelectorAll('.wcat').forEach((w) => {
+    w.addEventListener('click', () => {
+      setCategory(w.dataset.category);
+      els.input.focus();
+    });
+  });
+
+  // Settings (optional)
   els.settingsToggle.addEventListener('click', () => {
     els.sProxyCustom.value = localStorage.getItem(LS_PROXY) || '';
     els.settings.hidden = false;
@@ -226,7 +339,11 @@
   els.settingsClose.addEventListener('click', closeSettings);
   els.settings.addEventListener('click', (e) => { if (e.target === els.settings) closeSettings(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !els.settings.hidden) closeSettings();
+    if (e.key === 'Escape') {
+      if (!els.settings.hidden) closeSettings();
+      else if (!els.advancedPanel.hidden) closeSheet();
+      else if (!els.onboard.hidden) els.onboard.hidden = true;
+    }
   });
   els.settingsSave.addEventListener('click', () => {
     const v = els.sProxyCustom.value.trim();
@@ -235,21 +352,21 @@
     applyProxy();
     closeSettings();
   });
-  // Reset to automatic (clear any manual override).
-  document.getElementById('settings-reset').addEventListener('click', () => {
+  $('settings-reset').addEventListener('click', () => {
     localStorage.removeItem(LS_PROXY);
     els.sProxyCustom.value = '';
     applyProxy();
     closeSettings();
   });
 
-  // Brand / logo → return home.
-  const brand = document.getElementById('brand');
-  brand.addEventListener('click', goHome);
-  brand.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goHome(); }
+  // Onboarding close
+  els.onboardClose.addEventListener('click', () => {
+    localStorage.setItem(LS_ONBOARDED, '1');
+    els.onboard.hidden = true;
   });
 
   applyProxy();
+  setupInstall();
+  maybeOnboard();
   Viewer.init();
 })();

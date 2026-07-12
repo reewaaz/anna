@@ -1,4 +1,4 @@
-const CACHE = 'anna-v3';
+const CACHE = 'anna-v4';
 const ASSETS = [
   './',
   './index.html',

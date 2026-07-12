@@ -1,19 +1,16 @@
 {
   "name": "Anna — Archive Search",
   "short_name": "Anna",
-  "description": "Portable PWA to search Anna's Archive by category, with advanced filters and an in-app viewer.",
+  "description": "A beautiful PWA to search Anna's Archive by category, with advanced filters and an in-app viewer.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0f1115",
-  "theme_color": "#0f1115",
+  "background_color": "#0b0d14",
+  "theme_color": "#0b0d14",
   "orientation": "portrait-primary",
+  "categories": ["books", "education", "reference"],
   "icons": [
-    {
-      "src": "icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
   ]
 }

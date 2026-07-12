@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f1115" />
+  <meta name="theme-color" content="#0b0d14" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Anna" />
   <title>Anna — Archive Search</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
@@ -11,39 +15,121 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <!-- Onboarding (first visit) -->
+  <div id="onboard" class="overlay" hidden>
+    <div class="onboard-card">
+      <div class="onboard-hero">
+        <img src="icons/icon.svg" alt="" width="56" height="56" />
+        <h1>Welcome to Anna</h1>
+        <p>Your beautiful gateway to Anna's Archive — books, articles &amp; more.</p>
+      </div>
+      <ul class="onboard-steps">
+        <li>
+          <span class="step-ic">⌕</span>
+          <div><b>Search anything</b><span>Type a title, author, or topic and hit Search.</span></div>
+        </li>
+        <li>
+          <span class="step-ic">⟡</span>
+          <div><b>Filter by category</b><span>Top Links, Books, or Articles — on desktop at the top, on mobile at the bottom.</span></div>
+        </li>
+        <li>
+          <span class="step-ic">⚙</span>
+          <div><b>Power filters</b><span>Refine by language, format, year, and sort with the Filters sheet.</span></div>
+        </li>
+        <li>
+          <span class="step-ic">⬇</span>
+          <div><b>Install the app</b><span>Add Anna to your home screen for an app-like experience.</span></div>
+        </li>
+      </ul>
+      <div class="onboard-actions">
+        <button id="onboard-install" class="btn primary" hidden>Install app</button>
+        <button id="onboard-close" class="btn ghost">Get started</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Install banner -->
+  <div id="install-banner" class="install-banner" hidden>
+    <span class="ib-ic">⬇</span>
+    <div class="ib-text"><b>Install Anna</b><span>Use it like a native app, offline-ready.</span></div>
+    <button id="ib-install" class="btn primary sm">Install</button>
+    <button id="ib-dismiss" class="btn ghost sm" aria-label="Dismiss">✕</button>
+  </div>
+
   <header class="app-header">
     <div class="topbar">
       <div class="brand" id="brand" role="button" tabindex="0" title="Home" aria-label="Home">
-        <img src="icons/icon.svg" alt="" width="28" height="28" />
+        <img src="icons/icon.svg" alt="" width="30" height="30" />
         <span>Anna</span>
       </div>
 
-      <form id="search-form" class="search-form" autocomplete="off">
-        <input
-          id="search-input"
-          class="search-input"
-          type="search"
-          placeholder="Search Anna's Archive…"
-          aria-label="Search query"
-          required
-        />
+      <form id="search-form" class="search-form" autocomplete="off" role="search">
+        <div class="search-field">
+          <svg class="sf-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 4.2 12.6l4.1 4.1 1.4-1.4-4.1-4.1A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/></svg>
+          <input
+            id="search-input"
+            class="search-input"
+            type="search"
+            placeholder="Search books, articles, topics…"
+            aria-label="Search query"
+            required
+          />
+          <button type="button" id="clear-btn" class="clear-btn" aria-label="Clear" hidden>✕</button>
+        </div>
         <button type="submit" class="btn primary">Search</button>
         <button type="button" id="advanced-toggle" class="btn ghost" aria-expanded="false">Filters</button>
       </form>
 
-      <button id="settings-toggle" class="btn ghost icon-btn" title="Settings" aria-label="Settings">⚙</button>
+      <div class="top-actions">
+        <button id="install-btn" class="btn ghost icon-btn" hidden title="Install app" aria-label="Install app">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.2l3.6-3.6 1.4 1.4L12 16 6.9 11 8.4 9.6 12 13.2V3Zm-7 14h14v2H5z"/></svg>
+        </button>
+        <button id="settings-toggle" class="btn ghost icon-btn" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9.4 4a7.4 7.4 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-2-1.2l-.4-2.6H8.5l-.4 2.6a7.3 7.3 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1c.6.5 1.3.9 2 1.2l.4 2.6h5l.4-2.6c.7-.3 1.4-.7 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z"/></svg>
+        </button>
+      </div>
     </div>
-
-    <nav class="tabs" role="tablist">
-      <button class="tab active" data-category="top" role="tab">Top Links</button>
-      <button class="tab" data-category="book_any" role="tab">Books</button>
-      <button class="tab" data-category="article" role="tab">Articles</button>
-    </nav>
   </header>
 
-  <section id="advanced-panel" class="advanced-panel" hidden>
-    <div class="filters">
-      <label>Content
+  <!-- Category pill navigation (top on desktop, bottom bar on mobile) -->
+  <nav class="cat-nav" role="tablist" aria-label="Categories">
+    <button class="tab active" data-category="top" role="tab">
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5Zm0 13L3 13v5l9 5 9-5v-5l-9 5Z"/></svg>
+      <span>Top Links</span>
+    </button>
+    <button class="tab" data-category="book_any" role="tab">
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h6a2 2 0 0 1 2 2v14H7a2 2 0 0 0-2 2V4Zm14 0h-6v18h6a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/></svg>
+      <span>Books</span>
+    </button>
+    <button class="tab" data-category="article" role="tab">
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v16l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1Zm2 5h6v2H9V8Zm0 4h6v2H9v-2Z"/></svg>
+      <span>Articles</span>
+    </button>
+  </nav>
+
+  <!-- Advanced search sheet -->
+  <div id="advanced-panel" class="sheet" hidden>
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <h2>Advanced search</h2>
+        <button id="advanced-close" class="btn ghost icon-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Quick presets</label>
+        <div class="chips" id="presets">
+          <button class="chip" data-content="">Everything</button>
+          <button class="chip" data-content="book_any">Books</button>
+          <button class="chip" data-content="book_fiction">Fiction</button>
+          <button class="chip" data-content="book_nonfiction">Non-fiction</button>
+          <button class="chip" data-content="journal_article">Scientific articles</button>
+          <button class="chip" data-content="magazine">Magazines</button>
+          <button class="chip" data-content="standards_document">Standards</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label" for="f-content">Content type</label>
         <select id="f-content">
           <option value="">Any</option>
           <option value="book_any">Books</option>
@@ -52,46 +138,85 @@
           <option value="book_comic">Comic</option>
           <option value="journal_article">Journal article</option>
           <option value="magazine">Magazine</option>
-          <option value="standards_document">Standards</option>
+          <option value="standards_document">Standards document</option>
         </select>
-      </label>
-      <label>Language
-        <input id="f-lang" type="text" placeholder="e.g. en" />
-      </label>
-      <label>Extension
-        <input id="f-ext" type="text" placeholder="pdf, epub…" />
-      </label>
-      <label>Sort
-        <select id="f-sort">
-          <option value="">Relevance</option>
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="largest">Largest</option>
-          <option value="smallest">Smallest</option>
-          <option value="newest_added">Newest added</option>
-          <option value="oldest_added">Oldest added</option>
-          <option value="random">Random</option>
-        </select>
-      </label>
-      <label>Year from
-        <input id="f-year-from" type="number" min="0" placeholder="e.g. 2010" />
-      </label>
-      <label>Year to
-        <input id="f-year-to" type="number" min="0" placeholder="e.g. 2024" />
-      </label>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label class="fg-label" for="f-lang">Language</label>
+          <input id="f-lang" type="text" placeholder="e.g. en" />
+        </div>
+        <div class="field-group">
+          <label class="fg-label" for="f-sort">Sort</label>
+          <select id="f-sort">
+            <option value="">Relevance</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="largest">Largest</option>
+            <option value="smallest">Smallest</option>
+            <option value="newest_added">Newest added</option>
+            <option value="oldest_added">Oldest added</option>
+            <option value="random">Random</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">File format</label>
+        <div class="chips" id="ext-chips">
+          <button class="chip" data-ext="pdf">PDF</button>
+          <button class="chip" data-ext="epub">EPUB</button>
+          <button class="chip" data-ext="mobi">MOBI</button>
+          <button class="chip" data-ext="djvu">DJVU</button>
+          <button class="chip" data-ext="txt">TXT</button>
+          <button class="chip" data-ext="cbz">CBZ</button>
+        </div>
+        <input id="f-ext" type="text" placeholder="or type custom, comma-separated" />
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label class="fg-label" for="f-year-from">Year from</label>
+          <input id="f-year-from" type="number" min="0" placeholder="e.g. 2010" />
+        </div>
+        <div class="field-group">
+          <label class="fg-label" for="f-year-to">Year to</label>
+          <input id="f-year-to" type="number" min="0" placeholder="e.g. 2024" />
+        </div>
+      </div>
+
+      <div class="sheet-actions">
+        <button id="advanced-clear" class="btn ghost">Clear</button>
+        <button id="advanced-apply" class="btn primary">Apply</button>
+      </div>
     </div>
-  </section>
+  </div>
 
   <main>
     <div id="welcome" class="welcome">
-      <h1>Anna</h1>
-      <p>Search Anna's Archive for books, articles, and more — right in your browser.</p>
-      <div class="welcome-cats">
-        <div><b>Top Links</b><span>Best matches across everything</span></div>
-        <div><b>Books</b><span>Books only</span></div>
-        <div><b>Articles</b><span>Journals, magazines, standards</span></div>
+      <div class="welcome-inner">
+        <h1>Discover the world's library</h1>
+        <p>Search Anna's Archive for books, scientific articles, magazines and more — beautifully, in one place.</p>
+        <div class="welcome-cats">
+          <button class="wcat" data-category="top">
+            <span class="wcat-ic">⟡</span>
+            <b>Top Links</b>
+            <span>Best matches across everything</span>
+          </button>
+          <button class="wcat" data-category="book_any">
+            <span class="wcat-ic">📚</span>
+            <b>Books</b>
+            <span>Fiction, non-fiction &amp; more</span>
+          </button>
+          <button class="wcat" data-category="article">
+            <span class="wcat-ic">📄</span>
+            <b>Articles</b>
+            <span>Journals, magazines, standards</span>
+          </button>
+        </div>
+        <p class="hint">Tip: tap a category, then type your query. Use Filters for power search.</p>
       </div>
-      <p class="hint">Type a query above and press Search, then use the tabs to filter. Tap the Anna logo anytime to return home.</p>
     </div>
     <div id="status" class="status" hidden></div>
     <div id="results" class="results-grid" aria-live="polite"></div>
@@ -111,7 +236,7 @@
     </div>
     <iframe id="viewer-frame" class="viewer-frame" title="Content viewer" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
     <div id="viewer-fallback" class="viewer-fallback" hidden>
-      <p>This site can't be displayed inside the app (frame blocked).</p>
+      <p>This page can't be embedded. Open it in your browser instead.</p>
       <a id="viewer-fallback-link" class="btn primary" href="#" target="_blank" rel="noopener">Open in your browser</a>
     </div>
   </div>
