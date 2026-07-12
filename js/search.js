@@ -22,6 +22,8 @@ const Search = (() => {
 
   /* Map a UI category tab to Anna's "content" filter. */
   function categoryToContent(category) {
+    if (category === 'fiction') return ['book_fiction'];
+    if (category === 'nonfiction') return ['book_nonfiction'];
     if (category === 'book_any') return 'book_any';
     if (category === 'article') return ['journal_article']; // scientific articles only
     if (category === 'magazine') return ['magazine'];

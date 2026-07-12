@@ -30,7 +30,7 @@
         </li>
         <li>
           <span class="step-ic">⟡</span>
-          <div><b>Filter by category</b><span>Books or Articles — on desktop at the top, on mobile at the bottom.</span></div>
+          <div><b>Filter by category</b><span>Fiction, Non-fiction, Articles, Magazines &amp; Standards — on desktop at the top, on mobile at the bottom.</span></div>
         </li>
         <li>
           <span class="step-ic">⚙</span>
@@ -105,9 +105,13 @@
 
   <!-- Category pill navigation (top on desktop, bottom bar on mobile) -->
   <nav class="cat-nav" role="tablist" aria-label="Categories">
-    <button class="tab active" data-category="book_any" role="tab">
+    <button class="tab active" data-category="fiction" role="tab">
       <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6C8 4 4 4.5 3 5.5v13C4 17.5 8 17 12 19c4-2 8-1.5 9-1.5v-13c-1-1-5-1.5-9 .5Z"/></svg>
-      <span>Books</span>
+      <span>Fiction</span>
+    </button>
+    <button class="tab" data-category="nonfiction" role="tab">
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h6a2 2 0 0 1 2 2v14H7a2 2 0 0 0-2 2V4Zm14 0h-6v18h6a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/></svg>
+      <span>Non-fiction</span>
     </button>
     <button class="tab" data-category="article" role="tab">
       <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2Zm8 1.5V8h4.5L14 3.5ZM8 11h8v1.5H8V11Zm0 3h8v1.5H8V14Zm0 3h5v1.5H8V17Z"/></svg>
@@ -215,10 +219,15 @@
         <h1>Discover the world's library</h1>
         <p>Search Anna's Archive for books, scientific articles, magazines and more — beautifully, in one place.</p>
         <div class="welcome-cats">
-          <button class="wcat" data-category="book_any">
+          <button class="wcat" data-category="fiction">
+            <span class="wcat-ic">📖</span>
+            <b>Fiction</b>
+            <span>Novels, stories &amp; more</span>
+          </button>
+          <button class="wcat" data-category="nonfiction">
             <span class="wcat-ic">📚</span>
-            <b>Books</b>
-            <span>Fiction, non-fiction &amp; more</span>
+            <b>Non-fiction</b>
+            <span>Biography, history, science &amp; more</span>
           </button>
           <button class="wcat" data-category="article">
             <span class="wcat-ic">📄</span>

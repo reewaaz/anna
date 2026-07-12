@@ -10,7 +10,7 @@
 
   const state = {
     query: '',
-    category: 'book_any',
+    category: 'fiction',
     page: 1,
     results: [],
     loading: false
@@ -146,7 +146,11 @@
       for (const b of badges) {
         if (!b) continue;
         const span = document.createElement('span');
-        span.className = 'badge' + (b === r.ext.toUpperCase() ? ' accent' : '');
+        if (b === r.ext.toUpperCase()) {
+          span.className = 'badge ext ext-' + r.ext.toLowerCase();
+        } else {
+          span.className = 'badge';
+        }
         span.textContent = b;
         meta.appendChild(span);
       }

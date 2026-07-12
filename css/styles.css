@@ -21,6 +21,17 @@
 
   --danger: #ff8a8a;
 
+  /* file-type hues (dark theme = brighter text) */
+  --ext-pdf: #ff7a6e;
+  --ext-epub: #5fe39a;
+  --ext-mobi: #8db4ff;
+  --ext-azw3: #b3a6ff;
+  --ext-djvu: #d9a6f0;
+  --ext-txt: #c2c9da;
+  --ext-cbz: #ffc078;
+  --ext-fb2: #7fe3e3;
+  --ext-doc: #9fb4d8;
+
   --radius-s: 12px;
   --radius-m: 16px;
   --radius-l: 28px;
@@ -217,6 +228,25 @@ main { padding: 22px 18px 40px; max-width: 1280px; margin: 0 auto; }
   border-radius: var(--pill); padding: 3px 10px; font-size: 11px; color: var(--on-surface-variant);
 }
 .badge.accent { background: var(--primary-container); color: var(--primary); border-color: transparent; }
+
+/* Color-coded file-type badges (theme-aware via per-type hue vars) */
+.badge.ext { font-weight: 700; }
+.badge.ext-pdf { --c: var(--ext-pdf); }
+.badge.ext-epub { --c: var(--ext-epub); }
+.badge.ext-mobi { --c: var(--ext-mobi); }
+.badge.ext-azw3 { --c: var(--ext-azw3); }
+.badge.ext-djvu { --c: var(--ext-djvu); }
+.badge.ext-txt { --c: var(--ext-txt); }
+.badge.ext-cbz, .badge.ext-cbr { --c: var(--ext-cbz); }
+.badge.ext-fb2 { --c: var(--ext-fb2); }
+.badge.ext-doc { --c: var(--ext-doc); }
+.badge.ext-pdf, .badge.ext-epub, .badge.ext-mobi, .badge.ext-azw3,
+.badge.ext-djvu, .badge.ext-txt, .badge.ext-cbz, .badge.ext-cbr,
+.badge.ext-fb2, .badge.ext-doc {
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 15%, transparent);
+  border-color: color-mix(in srgb, var(--c) 32%, transparent);
+}
 
 .card .doc-type {
   font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
@@ -443,6 +473,17 @@ html.light {
   --primary-container-strong: rgba(91, 75, 214, 0.22);
   --secondary: #1f8a7a;
   --tertiary: #c44b6e;
+
+  /* file-type hues (light theme = darker text for contrast) */
+  --ext-pdf: #c0392b;
+  --ext-epub: #1f8a4d;
+  --ext-mobi: #2f6fd0;
+  --ext-azw3: #6a4fd0;
+  --ext-djvu: #8e44ad;
+  --ext-txt: #5a6275;
+  --ext-cbz: #c9760f;
+  --ext-fb2: #1f8a8a;
+  --ext-doc: #3a5a8a;
   --danger: #d23b3b;
 }
 html.light body::before {
