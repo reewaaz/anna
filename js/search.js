@@ -86,6 +86,31 @@ const Search = (() => {
     throw lastErr || new Error('All proxies failed');
   }
 
+  /* Silently probe each proxy and return the first that can reach Anna's.
+     Runs in the background on load so the user never has to pick one. */
+  async function detectWorkingProxy() {
+    for (const proxy of proxies) {
+      const sep = proxy.includes('?') ? '' : '?url=';
+      const url = proxy + sep + encodeURIComponent('https://annas-archive.gl/');
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 9000);
+      try {
+        const res = await fetch(url, {
+          signal: ctrl.signal,
+          headers: { 'Accept': 'text/html' }
+        });
+        if (!res.ok) continue;
+        const text = await res.text();
+        if (text && text.length > 500) return proxy;
+      } catch (_) {
+        /* try next */
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    return '';
+  }
+
   /* Public: perform a search. Returns array of result objects. */
   async function search(opts) {
     const content = categoryToContent(opts.category);
@@ -120,5 +145,5 @@ const Search = (() => {
     return merged;
   }
 
-  return { setProxies, setFallback, search, buildUrl, categoryToContent, DEFAULT_PROXIES };
+  return { setProxies, setFallback, search, buildUrl, categoryToContent, detectWorkingProxy, DEFAULT_PROXIES };
 })();

@@ -50,10 +50,24 @@
 
   function applyProxy() {
     const custom = (localStorage.getItem(LS_PROXY) || '').trim();
-    // Always try the public proxy list first; auto-fall back to a personal
-    // Worker (custom proxy) when Anna's DDoS-Guard blocks the shared IPs.
-    Search.setProxies(Search.DEFAULT_PROXIES);
+    // A personal/custom proxy (e.g. your Cloudflare Worker) is always the
+    // last-resort fallback. The chosen primary is automatic.
     Search.setFallback(custom);
+
+    if (custom) {
+      // User override: use it first, then the public list.
+      Search.setProxies([custom, ...Search.DEFAULT_PROXIES]);
+      return;
+    }
+
+    // No override → start with the default list (cors.lol first) and
+    // silently probe for a working proxy, reordering without any UI prompt.
+    Search.setProxies([...Search.DEFAULT_PROXIES]);
+    Search.detectWorkingProxy().then((best) => {
+      if (best && best !== Search.DEFAULT_PROXIES[0]) {
+        Search.setProxies([best, ...Search.DEFAULT_PROXIES.filter((p) => p !== best)]);
+      }
+    });
   }
 
   function renderCards(list) {
@@ -187,18 +201,30 @@
     doSearch(false);
   });
 
-  // Settings
+  // Settings — OPTIONAL. Never shown automatically; only via the gear.
   els.settingsToggle.addEventListener('click', () => {
     els.sProxyCustom.value = localStorage.getItem(LS_PROXY) || '';
     els.settings.hidden = false;
   });
-  els.settingsClose.addEventListener('click', () => { els.settings.hidden = true; });
+  function closeSettings() { els.settings.hidden = true; }
+  els.settingsClose.addEventListener('click', closeSettings);
+  els.settings.addEventListener('click', (e) => { if (e.target === els.settings) closeSettings(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.settings.hidden) closeSettings();
+  });
   els.settingsSave.addEventListener('click', () => {
     const v = els.sProxyCustom.value.trim();
     if (v) localStorage.setItem(LS_PROXY, v);
     else localStorage.removeItem(LS_PROXY);
     applyProxy();
-    els.settings.hidden = true;
+    closeSettings();
+  });
+  // Reset to automatic (clear any manual override).
+  document.getElementById('settings-reset').addEventListener('click', () => {
+    localStorage.removeItem(LS_PROXY);
+    els.sProxyCustom.value = '';
+    applyProxy();
+    closeSettings();
   });
 
   applyProxy();

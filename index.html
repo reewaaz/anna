@@ -104,24 +104,16 @@
     </div>
   </div>
 
-  <!-- Settings modal -->
+  <!-- Settings modal (optional — never shown automatically) -->
   <div id="settings" class="modal" hidden>
     <div class="modal-card">
-      <h2>Settings</h2>
-      <label class="block">CORS proxy
-        <select id="s-proxy">
-          <option value="https://api.cors.lol/?url=" selected>cors.lol (default)</option>
-          <option value="https://cors.eu.org/?url=">cors.eu.org</option>
-          <option value="https://api.allorigins.win/raw?url=">allorigins.win</option>
-          <option value="https://corsproxy.io/?url=">corsproxy.io</option>
-          <option value="https://api.codetabs.com/v1/proxy/?quest=">codetabs.com</option>
-        </select>
-      </label>
-      <label class="block">Custom proxy (overrides above)
+      <h2>Proxy settings <span class="hint">(optional)</span></h2>
+      <p class="hint">The app picks a working proxy automatically — you normally don't need to touch this. Set a custom proxy only if you want your own (e.g. a Cloudflare Worker, see README).</p>
+      <label class="block">Custom proxy (overrides automatic)
         <input id="s-proxy-custom" type="text" placeholder="https://your-proxy/?url=" />
       </label>
-      <p class="hint">Public proxies can be rate-limited by Anna's Archive's bot protection. For reliability, deploy your own proxy (see README).</p>
       <div class="modal-actions">
+        <button id="settings-reset" class="btn ghost">Use automatic</button>
         <button id="settings-save" class="btn primary">Save</button>
         <button id="settings-close" class="btn ghost">Close</button>
       </div>
