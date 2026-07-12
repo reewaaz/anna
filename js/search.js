@@ -3,9 +3,7 @@
 const AA_BASE = 'https://annas-archive.gl/search';
 
 const DEFAULT_PROXIES = [
-  'https://api.cors.lol/?url=',
-  'https://cors.eu.org/?url=',
-  'https://api.allorigins.win/raw?url='
+  'https://anna.riwaj-p.workers.dev/?url='
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

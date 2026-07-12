@@ -4,11 +4,13 @@
   const LS_ONBOARDED = 'anna.onboarded';
   const LS_PROXY = 'anna.proxy.custom';
   const LS_INSTALL_DISMISSED = 'anna.install.dismissed';
+  const LS_VIEW = 'anna.view';
+  const LS_THEME = 'anna.theme';
   const DAILY_TOPICS = ['science', 'history', 'programming', 'fiction', 'philosophy', 'art', 'mathematics'];
 
   const state = {
     query: '',
-    category: 'top',
+    category: 'book_any',
     page: 1,
     results: [],
     loading: false
@@ -37,6 +39,9 @@
     settingsSave: $('settings-save'),
     settingsClose: $('settings-close'),
     sProxyCustom: $('s-proxy-custom'),
+    viewGrid: $('view-grid'),
+    viewList: $('view-list'),
+    themeToggle: $('theme-toggle'),
     onboard: $('onboard'),
     onboardClose: $('onboard-close'),
     onboardInstall: $('onboard-install'),
@@ -106,6 +111,13 @@
       title.className = 'title';
       title.textContent = r.title;
 
+      if (r.authors) {
+        const author = document.createElement('div');
+        author.className = 'author';
+        author.textContent = r.authors;
+        body.appendChild(author);
+      }
+
       const meta = document.createElement('div');
       meta.className = 'meta';
       const badges = [
@@ -146,7 +158,7 @@
   }
 
   async function doSearch(reset = true) {
-    const query = els.input.value.trim();
+    const query = els.input.value.trim() || state.query;
     if (!query) return;
     state.query = query;
     if (reset) {
@@ -195,6 +207,40 @@
     else showStatus('Type a search above, then use these tabs to filter.', false);
   }
 
+  /* ---------- View mode (grid / list) ---------- */
+  function applyView(mode) {
+    const list = mode === 'list';
+    els.results.classList.toggle('results-list', list);
+    els.results.classList.toggle('results-grid', !list);
+    els.viewGrid.classList.toggle('active', !list);
+    els.viewList.classList.toggle('active', list);
+    localStorage.setItem(LS_VIEW, mode);
+  }
+  function setupViewToggle() {
+    const saved = localStorage.getItem(LS_VIEW) || 'grid';
+    applyView(saved);
+    els.viewGrid.addEventListener('click', () => applyView('grid'));
+    els.viewList.addEventListener('click', () => applyView('list'));
+  }
+
+  /* ---------- Theme (dark / light) ---------- */
+  function applyTheme(theme) {
+    const light = theme === 'light';
+    document.documentElement.classList.toggle('light', light);
+    document.querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', light ? '#f4f5fb' : '#0b0d14');
+    els.themeToggle.classList.toggle('active', light);
+    localStorage.setItem(LS_THEME, theme);
+  }
+  function setupThemeToggle() {
+    const saved = localStorage.getItem(LS_THEME) || 'dark';
+    applyTheme(saved);
+    els.themeToggle.addEventListener('click', () => {
+      const isLight = document.documentElement.classList.contains('light');
+      applyTheme(isLight ? 'dark' : 'light');
+    });
+  }
+
   function goHome() {
     Viewer.close();
     els.input.value = '';
@@ -207,22 +253,21 @@
   async function attemptDefaultBrowse() {
     const topic = DAILY_TOPICS[Math.floor(Date.now() / 86400000) % DAILY_TOPICS.length];
     state.query = topic;
-    state.category = 'top';
     state.page = 1;
     state.results = [];
     els.results.innerHTML = '';
     els.welcome.hidden = true;
     els.loadMoreWrap.hidden = true;
-    showStatus('Loading today’s top books & articles…');
+    showStatus('Loading today’s top results…');
 
-    const cacheKey = 'anna.home.' + dayStr();
+    const cacheKey = 'anna.home.' + dayStr() + '.' + state.category;
     let results;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         results = JSON.parse(cached);
       } else {
-        results = await Search.search({ query: topic, category: 'top', sort: 'newest_added', page: 1 });
+        results = await Search.search({ query: topic, category: state.category, sort: 'newest_added', page: 1 });
         if (results.length) localStorage.setItem(cacheKey, JSON.stringify(results));
       }
     } catch (_) {
@@ -399,6 +444,8 @@
 
   applyProxy();
   setupInstall();
+  setupViewToggle();
+  setupThemeToggle();
   maybeOnboard();
   attemptDefaultBrowse();
   Viewer.init();
