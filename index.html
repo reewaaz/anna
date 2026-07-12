@@ -9,6 +9,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Anna" />
   <title>Anna — Archive Search</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
   <link rel="apple-touch-icon" href="icons/icon.svg" />
@@ -293,14 +296,19 @@
   <!-- Downloads modal -->
   <div id="downloads" class="modal" hidden>
     <div class="modal-card downloads-card">
-      <div class="sheet-head">
-        <h2 id="downloads-title">Downloads</h2>
+      <div class="dl-head">
+        <img id="downloads-cover" class="dl-cover" alt="" hidden />
+        <div class="dl-head-text">
+          <h2 id="downloads-title">Downloads</h2>
+          <p class="hint" id="downloads-sub"></p>
+        </div>
         <button id="downloads-close" class="btn ghost icon-btn" aria-label="Close">✕</button>
       </div>
-      <p class="hint" id="downloads-sub"></p>
       <div id="downloads-status" class="status" hidden></div>
-      <div id="downloads-desc" class="downloads-desc" hidden></div>
-      <div id="downloads-list" class="downloads-list"></div>
+      <div class="dl-scroll">
+        <div id="downloads-desc" class="downloads-desc" hidden></div>
+        <div id="downloads-list" class="downloads-list"></div>
+      </div>
       <div class="modal-actions">
         <button id="downloads-desc-btn" class="btn ghost" type="button">Description</button>
         <a id="downloads-page" class="btn ghost" href="#" target="_blank" rel="noopener">Open on Anna’s ↗</a>
@@ -323,8 +331,6 @@
       </div>
     </div>
   </div>
-
-  <div id="toast" class="toast" hidden></div>
 
   <script src="js/search.js"></script>
   <script src="js/parser.js"></script>

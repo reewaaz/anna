@@ -51,6 +51,7 @@
     downloads: $('downloads'),
     downloadsTitle: $('downloads-title'),
     downloadsSub: $('downloads-sub'),
+    downloadsCover: $('downloads-cover'),
     downloadsList: $('downloads-list'),
     downloadsStatus: $('downloads-status'),
     downloadsClose: $('downloads-close'),
@@ -58,7 +59,6 @@
     downloadsDescBtn: $('downloads-desc-btn'),
     downloadsDesc: $('downloads-desc'),
     typeSelect: $('type-select'),
-    toast: $('toast'),
     onboard: $('onboard'),
     onboardClose: $('onboard-close'),
     onboardInstall: $('onboard-install'),
@@ -167,22 +167,11 @@
       card.appendChild(coverEl);
       card.appendChild(body);
 
-      const open = () => startDownload(r);
+      const open = () => openDownloads(r);
       card.addEventListener('click', open);
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });
-
-      const info = document.createElement('button');
-      info.type = 'button';
-      info.className = 'card-info';
-      info.setAttribute('aria-label', 'Details');
-      info.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2Zm0-8h-2V7h2Z"/></svg>';
-      info.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openDownloads(r);
-      });
-      card.appendChild(info);
 
       els.results.appendChild(card);
     }
@@ -191,7 +180,7 @@
   function makeMissingCover(title) {
     const div = document.createElement('div');
     div.className = 'cover missing';
-    div.textContent = (title || 'No cover').slice(0, 28);
+    div.dataset.letter = (title || '?').trim().charAt(0) || '?';
     return div;
   }
 
@@ -296,64 +285,6 @@
   }
 
   /* ---------- Downloads ---------- */
-  let toastTimer = null;
-  function toast(msg) {
-    els.toast.textContent = msg;
-    els.toast.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { els.toast.hidden = true; }, 4000);
-  }
-
-  /* Lightweight check: does this download link actually serve a file
-     (not an HTML error page)? Uses a 1-byte Range request through the
-     proxy so we don't pull the whole file just to test it. */
-  async function checkDownloadLink(href) {
-    try {
-      const url = Search.proxiedUrl(href);
-      const res = await fetch(url, { headers: { Range: 'bytes=0-0' } });
-      const ct = res.headers.get('content-type') || '';
-      return res.ok && !/text\/html/i.test(ct);
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /* Click a result → try to download directly, cycling Free (slow) links
-     first, then Fast links. Falls back to the manual link list if all fail. */
-  async function startDownload(r) {
-    let w = null;
-    try { w = window.open('', '_blank'); } catch (_) { /* popup blocked */ }
-    toast('Preparing download…');
-
-    try {
-      const pageRes = await fetch(Search.proxiedUrl(r.href), { headers: { 'Accept': 'text/html' } });
-      if (!pageRes.ok) throw new Error('HTTP ' + pageRes.status);
-      const links = Parser.parseDownloads(await pageRes.text());
-      if (!links.length) throw new Error('No download links');
-
-      const free = links.filter((l) => l.kind === 'slow');
-      const fast = links.filter((l) => l.kind !== 'slow');
-      const ordered = free.concat(fast);
-
-      for (const link of ordered) {
-        const kind = link.kind === 'slow' ? 'Free' : 'Fast';
-        toast('Trying ' + kind + ' server…');
-        if (await checkDownloadLink(link.href)) {
-          const target = link.href;
-          if (w) w.location.href = target;
-          else window.open(target, '_blank');
-          toast('Download started (' + kind + ' server) — opens in a new tab.');
-          return;
-        }
-      }
-      throw new Error('All links failed');
-    } catch (_) {
-      if (w) w.close();
-      toast('Auto-download failed — showing links to pick manually.');
-      openDownloads(r);
-    }
-  }
-
   function showDownloadsStatus(msg, isError) {
     els.downloadsStatus.hidden = false;
     els.downloadsStatus.textContent = msg;
@@ -370,8 +301,14 @@
       .filter(Boolean).join('  ·  ');
     els.downloadsList.innerHTML = '';
     els.downloadsDesc.hidden = true;
-    els.downloadsDesc.textContent = '';
+    els.downloadsDesc.innerHTML = '';
     els.downloadsPage.href = r.href || '#';
+    if (r.cover) {
+      els.downloadsCover.src = r.cover;
+      els.downloadsCover.hidden = false;
+    } else {
+      els.downloadsCover.hidden = true;
+    }
     showDownloadsStatus('Loading download links…');
 
     try {
@@ -392,7 +329,8 @@
   async function showDescription() {
     if (!currentItem) return;
     els.downloadsDesc.hidden = false;
-    els.downloadsDesc.textContent = 'Loading description…';
+    els.downloadsDesc.innerHTML = '<em>Loading description…</em>';
+    els.downloadsDesc.classList.add('loading');
     try {
       let html = currentItemHtml;
       if (!html) {
@@ -402,9 +340,22 @@
         currentItemHtml = html;
       }
       const desc = Parser.parseDescription(html);
-      els.downloadsDesc.textContent = desc || 'No description available.';
+      els.downloadsDesc.classList.remove('loading');
+      if (!desc) {
+        els.downloadsDesc.innerHTML = '<em>No description available.</em>';
+        return;
+      }
+      // Render as nicely spaced paragraphs (escape HTML, keep line breaks).
+      const esc = String(desc).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+      els.downloadsDesc.innerHTML = esc
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map((p) => '<p>' + p.replace(/\n/g, ' ') + '</p>')
+        .join('');
     } catch (_) {
-      els.downloadsDesc.textContent = 'Could not load the description.';
+      els.downloadsDesc.classList.remove('loading');
+      els.downloadsDesc.innerHTML = '<em>Could not load the description.</em>';
     }
   }
 
@@ -414,14 +365,33 @@
       .filter((l) => l.kind === 'slow')
       .concat(links.filter((l) => l.kind !== 'slow'));
     for (const link of ordered) {
+      const isFree = link.kind === 'slow';
       const a = document.createElement('a');
-      a.className = 'dl-link' + (link.kind === 'slow' ? ' free' : '');
+      a.className = 'dl-link ' + (isFree ? 'free' : 'fast');
       a.href = link.href;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
-      a.textContent = link.kind === 'slow'
-        ? link.label.replace(/^Slow\b/i, 'Free')
-        : link.label;
+      a.title = isFree ? 'Free server — opens Anna’s “Download now” page' : 'Fast server';
+
+      const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      ic.setAttribute('class', 'dl-ic');
+      ic.setAttribute('viewBox', '0 0 24 24');
+      ic.setAttribute('aria-hidden', 'true');
+      ic.innerHTML = isFree
+        ? '<path d="M12 3v10.2l3.6-3.6 1.4 1.4L12 16 6.9 11 8.4 9.6 12 13.2V3Zm-7 14h14v2H5z"/>'
+        : '<path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/>';
+
+      const label = document.createElement('span');
+      label.className = 'dl-label';
+      label.textContent = isFree ? link.label.replace(/^Slow\b/i, 'Free') : link.label;
+
+      const tag = document.createElement('span');
+      tag.className = 'dl-tag';
+      tag.textContent = isFree ? 'Free' : 'Fast';
+
+      a.appendChild(ic);
+      a.appendChild(label);
+      a.appendChild(tag);
       els.downloadsList.appendChild(a);
     }
   }

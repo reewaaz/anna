@@ -1,17 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#9b8cff"/>
-      <stop offset="1" stop-color="#7fd1c4"/>
+      <stop offset="0" stop-color="#8b7bff"/>
+      <stop offset="1" stop-color="#4fd1c5"/>
+    </linearGradient>
+    <linearGradient id="pg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eef0fb"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <rect x="128" y="150" width="256" height="212" rx="22" fill="#ffffff"/>
-  <line x1="150" y1="150" x2="150" y2="362" stroke="#e6e9f1" stroke-width="10"/>
-  <g stroke="#cfd4e6" stroke-width="9" stroke-linecap="round">
-    <line x1="174" y1="212" x2="346" y2="212"/>
-    <line x1="174" y1="252" x2="346" y2="252"/>
-    <line x1="174" y1="292" x2="312" y2="292"/>
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <g transform="translate(256 256)">
+    <path d="M-92 -118 C-128 -130 -150 -126 -156 -118 V118 C-150 110 -128 114 -92 102 Z" fill="#ffffff" opacity="0.96"/>
+    <path d="M92 -118 C128 -130 150 -126 156 -118 V118 C150 110 128 114 92 102 Z" fill="url(#pg)"/>
+    <path d="M-92 -118 C-56 -130 56 -130 92 -118 C56 -106 -56 -106 -92 -118 Z" fill="#ff8fb1"/>
+    <g stroke="#c7ccdf" stroke-width="9" stroke-linecap="round">
+      <line x1="-70" y1="-52" x2="70" y2="-52"/>
+      <line x1="-70" y1="-8" x2="70" y2="-8"/>
+      <line x1="-70" y1="36" x2="40" y2="36"/>
+    </g>
   </g>
-  <path d="M306 150v120l22-20 22 20V150z" fill="#ff9aa6"/>
 </svg>
