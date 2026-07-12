@@ -3,12 +3,12 @@
 const AA_BASE = 'https://annas-archive.gl/search';
 
 const DEFAULT_PROXIES = [
+  'https://api.cors.lol/?url=',
+  'https://cors.eu.org/?url=',
   'https://api.allorigins.win/raw?url=',
   'https://corsproxy.io/?url=',
   'https://api.codetabs.com/v1/proxy/?quest=',
-  'https://cors.eu.org/',
-  'https://proxy.cors.sh/',
-  'https://api.allorigins.win/get?url='
+  'https://proxy.cors.sh/?url='
 ];
 
 const Search = (() => {

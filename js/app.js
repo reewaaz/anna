@@ -66,6 +66,7 @@
       if (r.cover) {
         cover.className = 'cover';
         cover.loading = 'lazy';
+        cover.referrerPolicy = 'no-referrer';
         cover.src = r.cover;
         cover.alt = r.title;
         cover.onerror = () => {
@@ -152,7 +153,7 @@
       els.loadMoreWrap.hidden = results.length < 1;
     } catch (err) {
       showStatus('Search failed: ' + (err && err.message ? err.message : err) +
-        '. The proxy may be blocked — try another in Settings.', true);
+        '. If this persists, a personal proxy (see README) is more reliable.', true);
     } finally {
       state.loading = false;
     }
