@@ -455,6 +455,19 @@ html.light .theme-toggle .ic-sun { display: block; }
 .results-list .card .body { padding: 14px 16px; justify-content: center; }
 .results-list .card .title { font-size: 15px; }
 
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  z-index: 90; max-width: 92vw;
+  background: var(--surface-3); color: var(--on-surface);
+  border: 1px solid var(--outline); border-radius: var(--pill);
+  padding: 12px 20px; font-size: 14px; font-weight: 600; text-align: center;
+  box-shadow: var(--shadow-2);
+  animation: toastin .2s ease;
+}
+html.light .toast { background: #fff; }
+@keyframes toastin { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
 /* ---------- Light theme ---------- */
 html.light {
   --bg: #f4f5fb;

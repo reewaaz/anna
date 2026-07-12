@@ -52,6 +52,7 @@
     downloadsStatus: $('downloads-status'),
     downloadsClose: $('downloads-close'),
     downloadsPage: $('downloads-page'),
+    toast: $('toast'),
     onboard: $('onboard'),
     onboardClose: $('onboard-close'),
     onboardInstall: $('onboard-install'),
@@ -160,7 +161,7 @@
       card.appendChild(coverEl);
       card.appendChild(body);
 
-      const open = () => openDownloads(r);
+      const open = () => startDownload(r);
       card.addEventListener('click', open);
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
@@ -278,6 +279,64 @@
   }
 
   /* ---------- Downloads ---------- */
+  let toastTimer = null;
+  function toast(msg) {
+    els.toast.textContent = msg;
+    els.toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { els.toast.hidden = true; }, 4000);
+  }
+
+  /* Lightweight check: does this download link actually serve a file
+     (not an HTML error page)? Uses a 1-byte Range request through the
+     proxy so we don't pull the whole file just to test it. */
+  async function checkDownloadLink(href) {
+    try {
+      const url = Search.proxiedUrl(href);
+      const res = await fetch(url, { headers: { Range: 'bytes=0-0' } });
+      const ct = res.headers.get('content-type') || '';
+      return res.ok && !/text\/html/i.test(ct);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /* Click a result → try to download directly, cycling Free (slow) links
+     first, then Fast links. Falls back to the manual link list if all fail. */
+  async function startDownload(r) {
+    let w = null;
+    try { w = window.open('', '_blank'); } catch (_) { /* popup blocked */ }
+    toast('Preparing download…');
+
+    try {
+      const pageRes = await fetch(Search.proxiedUrl(r.href), { headers: { 'Accept': 'text/html' } });
+      if (!pageRes.ok) throw new Error('HTTP ' + pageRes.status);
+      const links = Parser.parseDownloads(await pageRes.text());
+      if (!links.length) throw new Error('No download links');
+
+      const free = links.filter((l) => l.kind === 'slow');
+      const fast = links.filter((l) => l.kind !== 'slow');
+      const ordered = free.concat(fast);
+
+      for (const link of ordered) {
+        const kind = link.kind === 'slow' ? 'Free' : 'Fast';
+        toast('Trying ' + kind + ' server…');
+        if (await checkDownloadLink(link.href)) {
+          const target = link.href;
+          if (w) w.location.href = target;
+          else window.open(target, '_blank');
+          toast('Download started (' + kind + ' server) — opens in a new tab.');
+          return;
+        }
+      }
+      throw new Error('All links failed');
+    } catch (_) {
+      if (w) w.close();
+      toast('Auto-download failed — showing links to pick manually.');
+      openDownloads(r);
+    }
+  }
+
   function showDownloadsStatus(msg, isError) {
     els.downloadsStatus.hidden = false;
     els.downloadsStatus.textContent = msg;
