@@ -21,9 +21,10 @@ browser → CORS proxy → https://annas-archive.gl/search?q=…&content=…&ext
 The returned HTML is parsed in the browser into result cards.
 
 > **Public proxies can be rate-limited / blocked by Anna's bot protection.**
-> If searches fail, open *Settings (⚙)* and switch proxies, or point the app at
-> your own proxy (see below). This is a discovery tool — please respect Anna's
-> rate limits and don't hammer the site.
+> The app tries the public proxy list first and **automatically falls back** to
+> your personal Worker (if set in *Settings → Custom proxy*) when the shared
+> IPs are blocked. This is a discovery tool — please respect Anna's rate limits
+> and don't hammer the site.
 
 ## Features
 - Category tabs: **Top Links** (relevance across all content), **Books**,
@@ -90,7 +91,15 @@ export default {
 ```
 
 Deploy with the [Wrangler CLI](https://developers.cloudflare.com/workers/):
-`wrangler init` → `wrangler deploy`.
+
+```bash
+cd worker
+wrangler deploy        # uses worker/wrangler.toml (no wrangler init needed)
+```
+
+It prints a URL like `https://anna-proxy.<subdomain>.workers.dev`. Paste that
+into the app's **Settings → Custom proxy** (the app auto-falls back to it
+whenever the public proxies are blocked).
 
 ## File layout
 ```

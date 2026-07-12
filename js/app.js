@@ -50,11 +50,10 @@
 
   function applyProxy() {
     const custom = (localStorage.getItem(LS_PROXY) || '').trim();
-    if (custom) {
-      Search.setProxies([custom]);
-    } else {
-      Search.setProxies(Search.DEFAULT_PROXIES);
-    }
+    // Always try the public proxy list first; auto-fall back to a personal
+    // Worker (custom proxy) when Anna's DDoS-Guard blocks the shared IPs.
+    Search.setProxies(Search.DEFAULT_PROXIES);
+    Search.setFallback(custom);
   }
 
   function renderCards(list) {

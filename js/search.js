@@ -13,9 +13,14 @@ const DEFAULT_PROXIES = [
 
 const Search = (() => {
   let proxies = [...DEFAULT_PROXIES];
+  let fallbackProxy = '';
 
   function setProxies(list) {
     if (Array.isArray(list) && list.length) proxies = list;
+  }
+
+  function setFallback(proxy) {
+    fallbackProxy = proxy || '';
   }
 
   /* Map a UI category tab to Anna's "content" filter. */
@@ -63,6 +68,21 @@ const Search = (() => {
         lastErr = err;
       }
     }
+    // Auto-fallback: if a personal Worker/custom proxy is configured, try it
+    // once public proxies are exhausted (Anna's DDoS-Guard blocks shared IPs).
+    if (fallbackProxy && !list.includes(fallbackProxy)) {
+      try {
+        const sep = fallbackProxy.includes('?') ? '' : '?url=';
+        const url = fallbackProxy + sep + encodeURIComponent(targetUrl);
+        const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const text = await res.text();
+        if (!text || text.length < 200) throw new Error('Empty proxy response');
+        return text;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
     throw lastErr || new Error('All proxies failed');
   }
 
@@ -100,5 +120,5 @@ const Search = (() => {
     return merged;
   }
 
-  return { setProxies, search, buildUrl, categoryToContent, DEFAULT_PROXIES };
+  return { setProxies, setFallback, search, buildUrl, categoryToContent, DEFAULT_PROXIES };
 })();

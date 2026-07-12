@@ -1,0 +1,7 @@
+name = "anna-proxy"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# Deploy with: wrangler deploy
+# Then paste the returned https://<name>.<subdomain>.workers.dev/?url=
+# into the app's Settings → Custom proxy.
