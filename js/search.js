@@ -5,11 +5,10 @@ const AA_BASE = 'https://annas-archive.gl/search';
 const DEFAULT_PROXIES = [
   'https://api.cors.lol/?url=',
   'https://cors.eu.org/?url=',
-  'https://api.allorigins.win/raw?url=',
-  'https://corsproxy.io/?url=',
-  'https://api.codetabs.com/v1/proxy/?quest=',
-  'https://proxy.cors.sh/?url='
+  'https://api.allorigins.win/raw?url='
 ];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const Search = (() => {
   let proxies = [...DEFAULT_PROXIES];
@@ -52,18 +51,34 @@ const Search = (() => {
     return htmls.filter(Boolean);
   }
 
+  async function tryProxy(proxy, targetUrl) {
+    const sep = proxy.includes('?') ? '' : '?url=';
+    const url = proxy + sep + encodeURIComponent(targetUrl);
+    let lastErr;
+    // Retry once on 429 (rate limit) — the only working public proxy throttles.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
+        if (res.status === 429) { await sleep(1500); continue; }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const text = await res.text();
+        // Reject proxy "error" pages (rate-limit / "need API key" messages),
+        // which are short and contain no result links.
+        if (!text || text.length < 5000) throw new Error('proxy returned an error page');
+        return text;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr;
+  }
+
   async function fetchThroughProxies(targetUrl, proxyOverride) {
     const list = proxyOverride && proxyOverride.length ? proxyOverride : proxies;
     let lastErr;
     for (const proxy of list) {
       try {
-        const sep = proxy.includes('?') ? '' : '?url=';
-        const url = proxy + sep + encodeURIComponent(targetUrl);
-        const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const text = await res.text();
-        if (!text || text.length < 200) throw new Error('Empty proxy response');
-        return text;
+        return await tryProxy(proxy, targetUrl);
       } catch (err) {
         lastErr = err;
       }
@@ -72,13 +87,7 @@ const Search = (() => {
     // once public proxies are exhausted (Anna's DDoS-Guard blocks shared IPs).
     if (fallbackProxy && !list.includes(fallbackProxy)) {
       try {
-        const sep = fallbackProxy.includes('?') ? '' : '?url=';
-        const url = fallbackProxy + sep + encodeURIComponent(targetUrl);
-        const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const text = await res.text();
-        if (!text || text.length < 200) throw new Error('Empty proxy response');
-        return text;
+        return await tryProxy(fallbackProxy, targetUrl);
       } catch (err) {
         lastErr = err;
       }

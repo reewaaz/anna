@@ -181,8 +181,8 @@
       renderCards(results);
       els.loadMoreWrap.hidden = results.length < 1;
     } catch (err) {
-      showStatus('Search failed: ' + (err && err.message ? err.message : err) +
-        '. If this persists, a personal proxy (see README) is more reliable.', true);
+      showStatus('Search failed: public proxies are rate-limited by Anna’s bot protection. ' +
+        'For reliable search, deploy the free Cloudflare Worker in worker/ (see README) and paste its URL in Settings → Custom proxy.', true);
     } finally {
       state.loading = false;
     }

@@ -20,12 +20,14 @@ browser → CORS proxy → https://annas-archive.gl/search?q=…&content=…&ext
 
 The returned HTML is parsed in the browser into result cards.
 
-> **Works out of the box.** The app's default proxy (`cors.lol`) is reachable
-> from Anna's Archive and sends CORS headers, so search works with **no setup**.
-> If a proxy is ever blocked, the app automatically tries the others and can
-> fall back to a personal Cloudflare Worker (set in *Settings → Custom proxy*).
-> This is a discovery tool — please respect Anna's rate limits and don't hammer
-> the site.
+> **Proxy note (important).** Anna's Archive sits behind aggressive DDoS-Guard
+> bot protection, so it blocks almost every shared/public CORS proxy. The only
+> public proxy that currently works is **`cors.lol`**, and it rate-limits under
+> load (you may see "limited usage" / "need API key" errors — those come from the
+> *proxy*, not Anna's). **For reliable, unlimited search, deploy the free
+> Cloudflare Worker in `worker/`** (2 commands, see below) and paste its URL into
+> *Settings → Custom proxy*. The app auto-falls back to it.
+> This is a discovery tool — please respect Anna's rate limits.
 
 ## Features
 - Category tabs: **Top Links** (relevance across all content), **Books**,
