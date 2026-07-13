@@ -1,43 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8b7bff"/>
-      <stop offset="0.55" stop-color="#7a6cf0"/>
-      <stop offset="1" stop-color="#4fd1c5"/>
+      <stop offset="0" stop-color="#9b8bff"/>
+      <stop offset="0.5" stop-color="#6f5cf0"/>
+      <stop offset="1" stop-color="#36cdbd"/>
     </linearGradient>
-    <linearGradient id="pg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="pageL" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#e8ebf7"/>
+      <stop offset="1" stop-color="#e7eaf7"/>
     </linearGradient>
-    <linearGradient id="pg2" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f3f4fb"/>
-      <stop offset="1" stop-color="#d7dcef"/>
+    <linearGradient id="pageR" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4f6fc"/>
+      <stop offset="1" stop-color="#d6dcef"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.35" r="0.7">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa6c0"/>
+      <stop offset="1" stop-color="#ff7aa6"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.32" cy="0.22" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.38"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.06"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
-  <rect width="512" height="512" rx="120" fill="url(#glow)"/>
-  <g transform="translate(256 264)">
-    <!-- left page -->
-    <path d="M-118 -126 C-150 -140 -176 -134 -184 -124 V120 C-176 110 -150 116 -118 102 C-86 116 -86 116 -86 116 Z" fill="#ffffff" opacity="0.97"/>
-    <!-- right page -->
-    <path d="M118 -126 C150 -140 176 -134 184 -124 V120 C176 110 150 116 118 102 C86 116 86 116 86 116 Z" fill="url(#pg)"/>
-    <!-- center spine shadow -->
-    <path d="M-86 -116 C-40 -128 40 -128 86 -116 C40 -104 -40 -104 -86 -116 Z" fill="#ff8fb1"/>
-    <!-- page lines left -->
-    <g stroke="#cdd2e6" stroke-width="9" stroke-linecap="round">
-      <line x1="-150" y1="-46" x2="-100" y2="-58"/>
-      <line x1="-150" y1="-2" x2="-100" y2="-14"/>
-      <line x1="-150" y1="42" x2="-118" y2="34"/>
+
+  <!-- tile -->
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="118" fill="url(#sheen)"/>
+
+  <g transform="translate(0 6)">
+    <!-- back pages (depth) -->
+    <path d="M256 156 C198 142 138 147 92 178 L92 322 C138 302 198 308 256 336 Z" fill="#ffffff" opacity="0.55"/>
+    <path d="M256 156 C314 142 374 147 420 178 L420 322 C374 302 314 308 256 336 Z" fill="#eef1fb" opacity="0.55"/>
+
+    <!-- front pages -->
+    <path d="M256 150 C200 137 140 142 94 172 L94 316 C140 297 200 302 256 330 Z" fill="url(#pageL)"/>
+    <path d="M256 150 C312 137 372 142 418 172 L418 316 C372 297 312 302 256 330 Z" fill="url(#pageR)"/>
+
+    <!-- spine shadow -->
+    <path d="M250 150 L262 150 L259 330 L253 330 Z" fill="#000000" opacity="0.10"/>
+
+    <!-- page lines -->
+    <g stroke="#c9cfe6" stroke-width="7" stroke-linecap="round">
+      <path d="M120 200 C150 192 196 196 226 206" fill="none"/>
+      <path d="M120 238 C150 230 196 234 226 244" fill="none"/>
+      <path d="M120 276 C150 268 196 272 224 282" fill="none"/>
+      <path d="M286 206 C316 196 362 192 392 200" fill="none"/>
+      <path d="M286 244 C316 234 362 230 392 238" fill="none"/>
+      <path d="M288 282 C316 272 362 268 390 276" fill="none"/>
     </g>
-    <!-- page lines right -->
-    <g stroke="#bcc3dc" stroke-width="9" stroke-linecap="round">
-      <line x1="100" y1="-58" x2="150" y2="-46"/>
-      <line x1="100" y1="-14" x2="150" y2="-2"/>
-      <line x1="118" y1="34" x2="150" y2="42"/>
-    </g>
+
+    <!-- ribbon bookmark -->
+    <path d="M248 150 L264 150 L264 252 L256 238 L248 252 Z" fill="url(#ribbon)"/>
   </g>
 </svg>
