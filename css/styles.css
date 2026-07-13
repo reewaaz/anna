@@ -23,6 +23,7 @@
 
   --danger: #ff7a7a;
   --success: #3ddc97;
+  --on-hover: #ffffff;
 
   /* file-type hues (dark) */
   --ext-pdf: #ff7a6e;
@@ -101,7 +102,7 @@ a { color: var(--primary); }
   cursor: pointer; white-space: nowrap;
   transition: background .15s, border-color .15s, transform .06s, box-shadow .2s, color .15s;
 }
-.btn:hover { border-color: var(--primary); background: var(--surface-3); color: #fff; }
+.btn:hover { border-color: var(--primary); background: var(--surface-3); color: var(--on-hover); }
 .btn:active { transform: translateY(1px); }
 .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--primary-container); }
 .btn.primary {
@@ -109,13 +110,13 @@ a { color: var(--primary); }
   border-color: transparent; color: var(--on-primary);
   box-shadow: 0 6px 20px rgba(139,123,255,.4);
 }
-.btn.primary:hover { filter: brightness(1.07); box-shadow: 0 8px 26px rgba(139,123,255,.5); }
+.btn.primary:hover { filter: brightness(1.07); box-shadow: 0 8px 26px rgba(139,123,255,.5); color: var(--on-primary); }
 .btn.ghost { background: transparent; }
 .btn.ghost:hover { background: var(--surface-2); }
 .btn.sm { padding: 8px 15px; font-size: 13px; }
 .icon-btn { padding: 10px; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; }
 .icon-btn svg { width: 22px; height: 22px; fill: var(--on-surface-soft); transition: fill .15s; }
-.icon-btn:hover svg { fill: #fff; }
+.icon-btn:hover svg { fill: var(--on-hover); }
 
 /* ---------- Header ---------- */
 .app-header {
@@ -168,7 +169,7 @@ a { color: var(--primary); }
   width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 13px;
   display: grid; place-items: center; transition: background .15s, color .15s;
 }
-.clear-btn:hover { background: var(--outline); color: #fff; }
+.clear-btn:hover { background: var(--outline); color: var(--on-hover); }
 .top-actions { display: flex; gap: 8px; flex: none; }
 
 /* ---------- Category pill nav ---------- */
@@ -433,7 +434,6 @@ main {
 .dl-link.free { border-color: color-mix(in srgb, var(--success) 55%, transparent); }
 .dl-link.free .dl-ic { fill: var(--success); }
 .dl-link.free .dl-tag { color: var(--success); background: color-mix(in srgb, var(--success) 16%, transparent); }
-.dl-link.fast .dl-tag { color: var(--primary); background: var(--primary-container); }
 
 /* ---------- Advanced sheet ---------- */
 .sheet {
@@ -552,6 +552,7 @@ html.light {
   --accent-2: #c44b6e;
   --success: #1f9d63;
   --danger: #d23b3b;
+  --on-hover: #181b27;
 
   --ext-pdf: #c0392b;
   --ext-epub: #1f8a4d;

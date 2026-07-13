@@ -100,14 +100,58 @@ const Parser = (() => {
     return out;
   }
 
+  // Keep only a safe subset of formatting tags; strip scripts, styles,
+  // iframes and any inline event handlers / javascript: URLs.
+  const ALLOWED_TAGS = new Set([
+    'P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'SMALL', 'SPAN',
+    'A', 'UL', 'OL', 'LI', 'DIV', 'H3', 'H4', 'H5', 'CODE', 'PRE', 'BLOCKQUOTE'
+  ]);
+
+  function sanitizeAttrs(el) {
+    Array.from(el.attributes).forEach((attr) => {
+      const n = attr.name.toLowerCase();
+      const v = attr.value.trim().toLowerCase();
+      if (n.startsWith('on')) el.removeAttribute(attr.name);
+      else if ((n === 'href' || n === 'src') && (v.startsWith('javascript:') || v.startsWith('data:'))) {
+        el.removeAttribute(attr.name);
+      }
+    });
+    if (el.tagName === 'A') {
+      el.setAttribute('target', '_blank');
+      el.setAttribute('rel', 'noopener noreferrer');
+    }
+  }
+
+  function sanitize(root) {
+    const clone = root.cloneNode(true);
+    const stack = [clone];
+    while (stack.length) {
+      const el = stack.pop();
+      Array.from(el.childNodes).forEach((child) => {
+        if (child.nodeType !== 1) return; // skip text/comment nodes
+        if (!ALLOWED_TAGS.has(child.tagName)) {
+          // Flatten: lift the element's children up, then drop it.
+          while (child.firstChild) el.insertBefore(child.firstChild, child);
+          el.removeChild(child);
+          stack.push(el); // re-process since children changed
+        } else {
+          sanitizeAttrs(child);
+          stack.push(child);
+        }
+      });
+    }
+    return clone.innerHTML.trim();
+  }
+
   function parseDescription(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrap = doc.querySelector('div.description') || doc.querySelector('[class*="description"]');
     if (!wrap) return '';
     // The actual text sits in the .mb-1 div (after the "description" label).
     const content = wrap.querySelector('.mb-1') || wrap.querySelector('.text-gray-800') || wrap;
-    let text = clean(content.textContent).replace(/^description/i, '').trim();
-    return text;
+    const text = clean(content.textContent).replace(/^description/i, '').trim();
+    if (!text) return '';
+    return sanitize(content);
   }
 
   return { parse, parseDownloads, parseDescription };

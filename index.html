@@ -99,9 +99,6 @@
         <button id="install-btn" class="btn ghost icon-btn" hidden title="Install app" aria-label="Install app">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.2l3.6-3.6 1.4 1.4L12 16 6.9 11 8.4 9.6 12 13.2V3Zm-7 14h14v2H5z"/></svg>
         </button>
-        <button id="settings-toggle" class="btn ghost icon-btn" title="Settings" aria-label="Settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9.4 4a7.4 7.4 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-2-1.2l-.4-2.6H8.5l-.4 2.6a7.3 7.3 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1c.6.5 1.3.9 2 1.2l.4 2.6h5l.4-2.6c.7-.3 1.4-.7 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z"/></svg>
-        </button>
       </div>
     </div>
   </header>
@@ -312,22 +309,6 @@
       <div class="modal-actions">
         <button id="downloads-desc-btn" class="btn ghost" type="button">Description</button>
         <a id="downloads-page" class="btn ghost" href="#" target="_blank" rel="noopener">Open on Anna’s ↗</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Settings modal (optional — never shown automatically) -->
-  <div id="settings" class="modal" hidden>
-    <div class="modal-card">
-      <h2>Proxy settings <span class="hint">(optional)</span></h2>
-      <p class="hint">The app picks a working proxy automatically — you normally don't need to touch this. Set a custom proxy only if you want your own (e.g. a Cloudflare Worker, see README).</p>
-      <label class="block">Custom proxy (overrides automatic)
-        <input id="s-proxy-custom" type="text" placeholder="https://your-proxy/?url=" />
-      </label>
-      <div class="modal-actions">
-        <button id="settings-reset" class="btn ghost">Use automatic</button>
-        <button id="settings-save" class="btn primary">Save</button>
-        <button id="settings-close" class="btn ghost">Close</button>
       </div>
     </div>
   </div>

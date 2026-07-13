@@ -40,11 +40,6 @@
     sortSelect: $('sort-select'),
     loadMoreWrap: $('load-more-wrap'),
     loadMore: $('load-more'),
-    settingsToggle: $('settings-toggle'),
-    settings: $('settings'),
-    settingsSave: $('settings-save'),
-    settingsClose: $('settings-close'),
-    sProxyCustom: $('s-proxy-custom'),
     viewGrid: $('view-grid'),
     viewList: $('view-list'),
     themeToggle: $('theme-toggle'),
@@ -302,6 +297,7 @@
     els.downloadsList.innerHTML = '';
     els.downloadsDesc.hidden = true;
     els.downloadsDesc.innerHTML = '';
+    els.downloadsDesc.dataset.loaded = '';
     els.downloadsPage.href = r.href || '#';
     if (r.cover) {
       els.downloadsCover.src = r.cover;
@@ -326,9 +322,17 @@
     }
   }
 
-  async function showDescription() {
+  async function toggleDescription() {
     if (!currentItem) return;
+    // Toggle off if already visible.
+    if (!els.downloadsDesc.hidden) {
+      els.downloadsDesc.hidden = true;
+      return;
+    }
     els.downloadsDesc.hidden = false;
+    // If already loaded for this item, just reveal it.
+    if (els.downloadsDesc.dataset.loaded === '1') return;
+
     els.downloadsDesc.innerHTML = '<em>Loading description…</em>';
     els.downloadsDesc.classList.add('loading');
     try {
@@ -341,59 +345,54 @@
       }
       const desc = Parser.parseDescription(html);
       els.downloadsDesc.classList.remove('loading');
+      els.downloadsDesc.dataset.loaded = '1';
       if (!desc) {
         els.downloadsDesc.innerHTML = '<em>No description available.</em>';
         return;
       }
-      // Render as nicely spaced paragraphs (escape HTML, keep line breaks).
-      const esc = String(desc).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-      els.downloadsDesc.innerHTML = esc
-        .split(/\n{2,}/)
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map((p) => '<p>' + p.replace(/\n/g, ' ') + '</p>')
-        .join('');
+      // desc is already sanitized HTML from the parser — render as-is.
+      els.downloadsDesc.innerHTML = desc;
     } catch (_) {
       els.downloadsDesc.classList.remove('loading');
+      els.downloadsDesc.dataset.loaded = '1';
       els.downloadsDesc.innerHTML = '<em>Could not load the description.</em>';
     }
   }
 
   function renderDownloadLinks(links) {
     els.downloadsList.innerHTML = '';
-    const ordered = links
-      .filter((l) => l.kind === 'slow')
-      .concat(links.filter((l) => l.kind !== 'slow'));
-    for (const link of ordered) {
-      const isFree = link.kind === 'slow';
+    const free = links.filter((l) => l.kind === 'slow');
+    if (!free.length) {
+      els.downloadsList.innerHTML = '<p class="hint" style="padding:6px 4px">No free download servers are available for this item.</p>';
+      return;
+    }
+    free.forEach((link, i) => {
       const a = document.createElement('a');
-      a.className = 'dl-link ' + (isFree ? 'free' : 'fast');
+      a.className = 'dl-link free';
       a.href = link.href;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
-      a.title = isFree ? 'Free server — opens Anna’s “Download now” page' : 'Fast server';
+      a.title = 'Free server — opens Anna’s “Download now” page';
 
       const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       ic.setAttribute('class', 'dl-ic');
       ic.setAttribute('viewBox', '0 0 24 24');
       ic.setAttribute('aria-hidden', 'true');
-      ic.innerHTML = isFree
-        ? '<path d="M12 3v10.2l3.6-3.6 1.4 1.4L12 16 6.9 11 8.4 9.6 12 13.2V3Zm-7 14h14v2H5z"/>'
-        : '<path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/>';
+      ic.innerHTML = '<path d="M12 3v10.2l3.6-3.6 1.4 1.4L12 16 6.9 11 8.4 9.6 12 13.2V3Zm-7 14h14v2H5z"/>';
 
       const label = document.createElement('span');
       label.className = 'dl-label';
-      label.textContent = isFree ? link.label.replace(/^Slow\b/i, 'Free') : link.label;
+      label.textContent = 'Download Server #' + (i + 1);
 
       const tag = document.createElement('span');
       tag.className = 'dl-tag';
-      tag.textContent = isFree ? 'Free' : 'Fast';
+      tag.textContent = 'Free';
 
       a.appendChild(ic);
       a.appendChild(label);
       a.appendChild(tag);
       els.downloadsList.appendChild(a);
-    }
+    });
   }
 
   function closeDownloads() { els.downloads.hidden = true; }
@@ -552,7 +551,7 @@
     if (state.query) doSearch(true);
   });
 
-  els.downloadsDescBtn.addEventListener('click', showDescription);
+  els.downloadsDescBtn.addEventListener('click', toggleDescription);
 
   els.loadMore.addEventListener('click', () => {
     if (state.loading) return;
@@ -575,36 +574,15 @@
     });
   });
 
-  // Settings (optional)
-  els.settingsToggle.addEventListener('click', () => {
-    els.sProxyCustom.value = localStorage.getItem(LS_PROXY) || '';
-    els.settings.hidden = false;
-  });
-  function closeSettings() { els.settings.hidden = true; }
-  els.settingsClose.addEventListener('click', closeSettings);
-  els.settings.addEventListener('click', (e) => { if (e.target === els.settings) closeSettings(); });
+  // Downloads modal close
   els.downloadsClose.addEventListener('click', closeDownloads);
   els.downloads.addEventListener('click', (e) => { if (e.target === els.downloads) closeDownloads(); });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (!els.settings.hidden) closeSettings();
-      else if (!els.downloads.hidden) closeDownloads();
+      if (!els.downloads.hidden) closeDownloads();
       else if (!els.advancedPanel.hidden) closeSheet();
       else if (!els.onboard.hidden) els.onboard.hidden = true;
     }
-  });
-  els.settingsSave.addEventListener('click', () => {
-    const v = els.sProxyCustom.value.trim();
-    if (v) localStorage.setItem(LS_PROXY, v);
-    else localStorage.removeItem(LS_PROXY);
-    applyProxy();
-    closeSettings();
-  });
-  $('settings-reset').addEventListener('click', () => {
-    localStorage.removeItem(LS_PROXY);
-    els.sProxyCustom.value = '';
-    applyProxy();
-    closeSettings();
   });
 
   // Onboarding close
