@@ -18,35 +18,82 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- Onboarding (first visit) -->
-  <div id="onboard" class="overlay" hidden>
-    <div class="onboard-card">
-      <div class="onboard-hero">
-        <img src="icons/icon.svg" alt="" width="56" height="56" />
-        <h1>Welcome to Anna</h1>
-        <p>Your beautiful gateway to Anna's Archive — books, articles &amp; more.</p>
+  <!-- Onboarding tutorial (first visit) -->
+  <div id="onboard" class="overlay onboard" hidden>
+    <div class="onboard-card" role="dialog" aria-modal="true" aria-label="Welcome to Anna">
+      <button id="onboard-skip" class="onboard-skip" type="button">Skip</button>
+
+      <div class="onboard-progress" aria-hidden="true">
+        <span class="ob-dot active" data-i="0"></span>
+        <span class="ob-dot" data-i="1"></span>
+        <span class="ob-dot" data-i="2"></span>
+        <span class="ob-dot" data-i="3"></span>
+        <span class="ob-dot" data-i="4"></span>
       </div>
-      <ul class="onboard-steps">
-        <li>
-          <span class="step-ic">⌕</span>
-          <div><b>Search anything</b><span>Type a title, author, or topic and hit Search.</span></div>
-        </li>
-        <li>
-          <span class="step-ic">⟡</span>
-          <div><b>Filter by category</b><span>Fiction, Non-fiction, Articles, Magazines &amp; Standards — on desktop at the top, on mobile at the bottom.</span></div>
-        </li>
-        <li>
-          <span class="step-ic">⚙</span>
-          <div><b>Power filters</b><span>Refine by language, format, year, and sort with the Filters sheet.</span></div>
-        </li>
-        <li>
-          <span class="step-ic">⬇</span>
-          <div><b>Install the app</b><span>Add Anna to your home screen for an app-like experience.</span></div>
-        </li>
-      </ul>
+
+      <div class="onboard-viewport">
+        <!-- Slide 0 — Welcome -->
+        <section class="ob-slide active" data-step="0">
+          <div class="ob-art ob-art--welcome">
+            <span class="ob-ring"></span>
+            <span class="ob-ring ob-ring--2"></span>
+            <img class="ob-logo" src="icons/icon.svg" alt="" width="72" height="72" />
+          </div>
+          <h1 class="ob-title">Welcome to <span>Anna</span></h1>
+          <p class="ob-sub">Your beautiful gateway to Anna’s Archive — millions of books, articles &amp; more, in one calm place.</p>
+        </section>
+
+        <!-- Slide 1 — Search -->
+        <section class="ob-slide" data-step="1">
+          <div class="ob-art">
+            <span class="ob-ic" style="--d:.05s">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 4.2 12.6l4.1 4.1 1.4-1.4-4.1-4.1A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/></svg>
+            </span>
+          </div>
+          <h2 class="ob-title">Search anything</h2>
+          <p class="ob-sub">Type a <b>title</b>, <b>author</b>, or <b>topic</b> and hit Search. Results appear instantly as elegant cards.</p>
+        </section>
+
+        <!-- Slide 2 — Categories -->
+        <section class="ob-slide" data-step="2">
+          <div class="ob-art">
+            <span class="ob-ic" style="--d:.05s">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v6H4V5Zm9-1h7v5h-7V4ZM4 13h7v7H4v-7Zm9 1h7v7h-7v-7Z"/></svg>
+            </span>
+          </div>
+          <h2 class="ob-title">Browse by category</h2>
+          <p class="ob-sub">Switch between <b>Fiction</b>, <b>Non-fiction</b>, <b>Articles</b>, <b>Magazines</b> &amp; <b>Standards</b> — tabs sit at the top on desktop, the bottom bar on mobile.</p>
+        </section>
+
+        <!-- Slide 3 — Filters -->
+        <section class="ob-slide" data-step="3">
+          <div class="ob-art">
+            <span class="ob-ic" style="--d:.05s">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v2.2l-7 7v5.3l-4 2V14l-7-7V5Zm2.2.8v.9L11 13.3V17l2-1v-2.7l5.8-5.6V5.8H5.2Z"/></svg>
+            </span>
+          </div>
+          <h2 class="ob-title">Power filters</h2>
+          <p class="ob-sub">Open <b>Filters</b> to refine by <b>language</b>, <b>file format</b>, <b>year</b> and <b>sort order</b> — find exactly what you need.</p>
+        </section>
+
+        <!-- Slide 4 — Install -->
+        <section class="ob-slide" data-step="4">
+          <div class="ob-art">
+            <span class="ob-ic" style="--d:.05s">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.2l3.6-3.6 1.4 1.4L12 16 6.9 11 8.4 9.6 12 13.2V3Zm-7 14h14v2H5z"/></svg>
+            </span>
+          </div>
+          <h2 class="ob-title">Take Anna anywhere</h2>
+          <p class="ob-sub">Install Anna for an <b>app-like</b>, <b>offline-ready</b> experience — right from your home screen.</p>
+          <button id="onboard-install" class="btn primary ob-install" hidden>Install app</button>
+        </section>
+      </div>
+
       <div class="onboard-actions">
-        <button id="onboard-install" class="btn primary" hidden>Install app</button>
-        <button id="onboard-close" class="btn ghost">Get started</button>
+        <button id="onboard-back" class="btn ghost" type="button" hidden>Back</button>
+        <div class="ob-spacer"></div>
+        <button id="onboard-next" class="btn primary" type="button">Next</button>
+        <button id="onboard-close" class="btn primary" type="button" hidden>Get started</button>
       </div>
     </div>
   </div>

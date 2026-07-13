@@ -57,6 +57,9 @@
     onboard: $('onboard'),
     onboardClose: $('onboard-close'),
     onboardInstall: $('onboard-install'),
+    onboardSkip: $('onboard-skip'),
+    onboardBack: $('onboard-back'),
+    onboardNext: $('onboard-next'),
     installBanner: $('install-banner'),
     ibInstall: $('ib-install'),
     ibDismiss: $('ib-dismiss'),
@@ -485,7 +488,49 @@
     });
   }
 
-  /* ---------- Onboarding ---------- */
+  /* ---------- Onboarding tutorial ---------- */
+  const obState = { step: 0, total: 0 };
+  function setupOnboarding() {
+    const slides = Array.from(els.onboard.querySelectorAll('.ob-slide'));
+    const dots = Array.from(els.onboard.querySelectorAll('.ob-dot'));
+    obState.total = slides.length;
+
+    function render() {
+      slides.forEach((s, i) => {
+        s.classList.toggle('active', i === obState.step);
+        s.classList.toggle('leaving', false);
+      });
+      dots.forEach((d, i) => d.classList.toggle('active', i === obState.step));
+
+      const first = obState.step === 0;
+      const last = obState.step === obState.total - 1;
+      els.onboardBack.hidden = first;
+      els.onboardNext.hidden = last;
+      els.onboardClose.hidden = !last;
+      // Re-trigger icon pop animation on the active slide.
+      const ic = slides[obState.step].querySelector('.ob-ic, .ob-logo, .ob-ring');
+      if (ic) { ic.style.animation = 'none'; void ic.offsetWidth; ic.style.animation = ''; }
+    }
+
+    function goTo(i) {
+      obState.step = Math.max(0, Math.min(obState.total - 1, i));
+      render();
+    }
+
+    function finish() {
+      localStorage.setItem(LS_ONBOARDED, '1');
+      els.onboard.hidden = true;
+    }
+
+    els.onboardNext.addEventListener('click', () => goTo(obState.step + 1));
+    els.onboardBack.addEventListener('click', () => goTo(obState.step - 1));
+    els.onboardSkip.addEventListener('click', finish);
+    els.onboardClose.addEventListener('click', finish);
+
+    obState.goTo = goTo;
+    return { finish };
+  }
+
   function maybeOnboard() {
     if (!localStorage.getItem(LS_ONBOARDED)) {
       els.onboard.hidden = false;
@@ -581,7 +626,10 @@
     if (e.key === 'Escape') {
       if (!els.downloads.hidden) closeDownloads();
       else if (!els.advancedPanel.hidden) closeSheet();
-      else if (!els.onboard.hidden) els.onboard.hidden = true;
+      else if (!els.onboard.hidden) {
+        localStorage.setItem(LS_ONBOARDED, '1');
+        els.onboard.hidden = true;
+      }
     }
   });
 
@@ -595,6 +643,7 @@
   setupInstall();
   setupViewToggle();
   setupThemeToggle();
+  setupOnboarding();
   maybeOnboard();
   attemptDefaultBrowse();
   Viewer.init();
