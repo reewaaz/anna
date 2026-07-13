@@ -6,3 +6,7 @@ node_modules/
 # Credentials / local secrets
 .env
 cloudflare-api-token.txt
+
+.dev.vars*
+!.dev.vars.example
+!.env.example
