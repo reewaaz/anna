@@ -105,6 +105,21 @@ a { color: var(--primary); }
 .btn:hover { border-color: var(--primary); background: var(--surface-3); color: var(--on-hover); }
 .btn:active { transform: translateY(1px); }
 .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--primary-container); }
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--outline-variant);
+  background: var(--surface-2);
+  color: var(--on-surface-variant);
+}
+.btn:disabled:hover,
+.btn[disabled]:hover {
+  border-color: var(--outline-variant);
+  background: var(--surface-2);
+  color: var(--on-surface-variant);
+  transform: none;
+}
 .btn.primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
   border-color: transparent; color: var(--on-primary);
@@ -117,6 +132,11 @@ a { color: var(--primary); }
 .icon-btn { padding: 10px; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; }
 .icon-btn svg { width: 22px; height: 22px; fill: var(--on-surface-soft); transition: fill .15s; }
 .icon-btn:hover svg { fill: var(--on-hover); }
+.icon-btn:disabled svg,
+.icon-btn[disabled] svg {
+  fill: var(--on-surface-variant);
+  opacity: 0.5;
+}
 
 /* ---------- Header ---------- */
 .app-header {

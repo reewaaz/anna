@@ -454,23 +454,54 @@
 
   /* ---------- Install prompt ---------- */
   function setupInstall() {
+    // Buttons are now visible by default in HTML
+    // Hide them initially if we know the app is already installed or not supported
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    if (isStandalone || isIOS) {
+      // On iOS, PWA install works differently (Share menu -> Add to Home Screen)
+      // In standalone mode, app is already installed
+      els.installBtn.hidden = true;
+      els.onboardInstall.hidden = true;
+      return;
+    }
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      els.installBtn.hidden = false;
+      // Enable install buttons now that prompt is available
+      els.installBtn.disabled = false;
+      els.onboardInstall.disabled = false;
+      els.installBtn.title = 'Install app';
+      els.onboardInstall.textContent = 'Install app';
+      
+      // Show install banner if not dismissed and not onboarded
       if (!localStorage.getItem(LS_INSTALL_DISMISSED) && !localStorage.getItem(LS_ONBOARDED)) {
-        // shown via onboarding instead
-      } else if (!localStorage.getItem(LS_INSTALL_DISMISSED)) {
         els.installBanner.hidden = false;
       }
-      els.onboardInstall.hidden = false;
     });
 
+    // Initially disable buttons until beforeinstallprompt fires
+    els.installBtn.disabled = true;
+    els.onboardInstall.disabled = true;
+    els.installBtn.title = 'Install app (checking availability…)';
+    els.onboardInstall.textContent = 'Checking…';
+
     const promptInstall = async () => {
-      if (!deferredPrompt) return;
+      if (!deferredPrompt) {
+        // Prompt not ready yet - could be iOS or browser hasn't fired event
+        if (isIOS) {
+          showStatus('On iOS: tap Share → "Add to Home Screen" to install', false);
+        } else {
+          showStatus('Install not available yet. Try again in a moment.', false);
+        }
+        return;
+      }
       deferredPrompt.prompt();
       await deferredPrompt.userChoice;
       deferredPrompt = null;
+      // Hide all install UI after successful install
       els.installBtn.hidden = true;
       els.installBanner.hidden = true;
       els.onboardInstall.hidden = true;
@@ -485,6 +516,7 @@
     window.addEventListener('appinstalled', () => {
       els.installBtn.hidden = true;
       els.installBanner.hidden = true;
+      els.onboardInstall.hidden = true;
     });
   }
 
