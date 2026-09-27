@@ -46,24 +46,45 @@ any automated client:
 
 ### What this means for the features
 
-`annas-archive.is` honours only two of the app's filter dimensions. The app now
-**knows this** and disables the unsupported controls rather than silently
-returning unfiltered results:
+Measured directly against the live mirror, not assumed:
 
-| Filter | `annas-archive.is` | `annas-archive.gl` |
+| Filter | `annas-archive.is` | How the app handles it |
 |---|---|---|
-| Query (`q`) | works | works |
-| Page (`page`) | works | works |
-| File format | works (`extension=`, 8 formats) | works |
-| Language | **broken** — every value returns 0 results | supported |
-| Sort | **broken** — every value returns 0 results | supported |
-| Category (`content=`) | **ignored** | supported |
-| Year range | **ignored** | supported |
-| Download links | **sign-in required** | supported anonymously |
+| Query (`q`) | works | sent upstream |
+| Page (`page`) | works | sent upstream |
+| File format | works (`extension=`, 8 formats) | sent upstream |
+| Sort | **ignored** — `sort=title` returns results in the *same order* as no sort; `sort=oldest/largest/smallest` return 0 results | applied in the browser |
+| Year range | **ignored** — `year_from=1990` still returns a 1982 book | applied in the browser |
+| Language | **broken** — every value returns 0 results | disabled, with the reason shown |
+| Category (`content=`) | **ignored** — `content=magazines` still returns 20 "Books catalog" cards | disabled, with the reason shown |
+| Download links | **sign-in required** | the modal says so instead of showing an empty list |
 
-The app also parses **two** result layouts (the legacy `.gl` list and the current
+**Sorting and year range are done client-side.** The mirror ignores both, so
+they are not sent upstream at all — sending them would be worse than useless,
+since three of the four sort values return *zero* results. Instead the app sorts
+and filters the cards it has already loaded, using metadata that is present on
+essentially all of them: title on 100%, file size on 100%, year on ~70%.
+
+Two honest limits, both surfaced in the UI rather than hidden:
+
+- It sorts the **current page** of results, not the whole corpus. The mirror note
+  says so, and **Load more** widens it.
+- About 30% of cards carry no year. When a year range is set those are **excluded**,
+  because there is no way to tell whether they fall inside it, and the status line
+  reports how many were left out.
+
+Language could not be rescued this way: upstream returns nothing for it *and* the
+cards carry no language field at all (0% across 100 sampled cards), so there is
+nothing to filter on. It stays disabled.
+
+The app parses **two** result layouts (the legacy `.gl` list and the current
 catalog card grid) and fails over between mirrors automatically, so it recovers
 on its own if a mirror changes.
+
+A search that legitimately matches nothing is now reported as "no results", not
+as a failure. Both look identical to the parser — zero cards — so the app checks
+whether the page is a real results page before calling it a layout change. This
+was the cause of the misleading `(is: parse, gl: challenge)` message.
 
 ## Features
 - Search by query, with file-format filtering and pagination.
@@ -152,11 +173,20 @@ capabilities it actually honours, so the app can disable what it cannot do:
   id: 'is',
   origin: 'https://annas-archive.is',
   caps: { q: true, page: true, ext: true, lang: false, sort: false, content: false, year: false },
+  local: ['sort', 'year'],
   paramMap: { q: 'q', page: 'page', ext: 'extension' },
   formats: ['pdf', 'epub', 'mobi', 'azw3', 'djvu', 'fb2', 'txt', 'rtf'],
   notes: ['...']
 }
 ```
+
+A capability is one of three things:
+
+| Value | Meaning |
+|---|---|
+| `true` | the mirror honours it — sent as a query parameter |
+| `'local'` *(the `local` array)* | upstream ignores it, but the app can honour it in the browser from the card metadata, so it is **not** dropped and the control stays enabled |
+| `false` | nothing can honour it — the control is disabled with a reason |
 
 `paramMap` maps the app's filter names to the mirror's query parameters —
 `annas-archive.is` spells them `language` and `extension`, not `lang` and `ext`.

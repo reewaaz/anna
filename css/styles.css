@@ -278,6 +278,20 @@ main {
 select:disabled, input:disabled, .chip:disabled { cursor: not-allowed; }
 .chip:disabled { opacity: .4; }
 
+/* Controls the mirror ignores upstream but the app honours in the browser.
+   These stay enabled; the label says where the sorting actually happens, so
+   "sorted" is never mistaken for a server-side ordering of the whole corpus. */
+.field-group.applied-locally .fg-label::after,
+.sort-wrap.applied-locally::after {
+  content: 'applied on this page';
+  display: block; margin-top: 4px;
+  font-size: 11px; font-weight: 500; color: var(--accent); opacity: .9;
+}
+.fg-hint {
+  margin: 6px 0 0; font-size: 11px; line-height: 1.4;
+  color: var(--on-surface-variant); opacity: .85;
+}
+
 /* Sign-in gate shown when a mirror withholds download links from anonymous visitors. */
 .dl-login-gate { padding: 22px 18px; text-align: center; }
 .dl-login-gate b { display: block; margin-bottom: 6px; font-size: 15px; }

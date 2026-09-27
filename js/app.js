@@ -13,7 +13,11 @@
     category: 'fiction',
     page: 1,
     results: [],
-    loading: false
+    loading: false,
+    // Filters the active mirror cannot do upstream, applied in the browser.
+    // `noMatches` distinguishes "the query found nothing" from "the fetch
+    // failed", so an empty result set is not shown as an error.
+    noMatches: false
   };
 
   let currentItem = null;
@@ -116,12 +120,18 @@
     ];
 
     const missing = [];
+    const local = caps.local || [];
     for (const g of groups) {
-      const ok = !!caps[g.cap];
+      // A 'local' capability is honoured in the browser, so the control stays
+      // enabled even though the mirror's own caps say false — the upstream
+      // value is simply not sent.
+      const localOnly = local.includes(g.cap);
+      const ok = !!caps[g.cap] || localOnly;
       if (!ok) missing.push(g.cap);
       for (const node of g.nodes) {
         if (!node) continue;
         node.classList.toggle('unsupported', !ok);
+        node.classList.toggle('applied-locally', ok && localOnly);
         // Disable interactive descendants only.
         Array.from(node.querySelectorAll('input, select, button')).forEach((el) => {
           el.disabled = !ok;
@@ -145,14 +155,15 @@
       });
     }
 
-    // Sort options: a mirror with no sort support cannot offer any of them.
-    if (!caps.sort) {
+    // Sort options: only disable them when the mirror supports neither an
+    // upstream sort nor a client-side one.
+    if (!caps.sort && !local.includes('sort')) {
       [$('f-sort'), els.sortSelect].forEach((sel) => {
         Array.from(sel.options).forEach((o) => { o.disabled = !!o.value; });
       });
     }
 
-    renderMirrorNote(missing, mirror);
+    renderMirrorNote(missing, mirror, local);
   }
 
   const FILTER_LABELS = {
@@ -160,15 +171,17 @@
     ext: 'file format', year: 'year range'
   };
 
-  function renderMirrorNote(missing, mirror) {
+  function renderMirrorNote(missing, mirror, local) {
     const el = $('mirror-note');
     if (!el) return;
-    if (!missing.length) {
+    const localNames = (local || [])
+      .map((c) => FILTER_LABELS[c] || c)
+      .filter((c, i, a) => a.indexOf(c) === i);
+    if (!missing.length && !localNames.length) {
       el.hidden = true;
       el.textContent = '';
       return;
     }
-    const names = missing.map((m) => FILTER_LABELS[m] || m);
     el.hidden = false;
     el.innerHTML = '';
     const ic = document.createElement('span');
@@ -178,15 +191,27 @@
     const strong = document.createElement('b');
     strong.textContent = mirror.label + ' — ';
     txt.appendChild(strong);
-    txt.appendChild(document.createTextNode(
-      'this mirror does not support ' + names.join(', ') +
-      '. Those controls are disabled rather than silently ignored, so results are unfiltered by them.'
-    ));
+
+    const bits = [];
+    if (missing.length) {
+      const names = missing.map((m) => FILTER_LABELS[m] || m);
+      bits.push('this mirror does not support ' + names.join(', ') +
+        '. Those controls are disabled rather than silently ignored, so results are unfiltered by them');
+    }
+    if (localNames.length) {
+      bits.push(localNames.join(' and ') +
+        ' cannot be done upstream, so they are applied in your browser to the ' +
+        'results on the current page only (use Load more to widen it)');
+    }
+    txt.appendChild(document.createTextNode(bits.join('. ') + '.'));
     el.appendChild(ic);
     el.appendChild(txt);
   }
 
-  function renderCards(list) {
+  /* Build card elements without touching the DOM, so the same code can be used
+     for the first render and for a client-side re-sort. */
+  function buildCards(list) {
+    const out = [];
     for (const r of list) {
       const card = document.createElement('article');
       card.className = 'card';
@@ -257,8 +282,15 @@
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });
 
-      els.results.appendChild(card);
+      out.push(card);
     }
+    return out;
+  }
+
+  function renderCards(list) {
+    const frag = document.createDocumentFragment();
+    for (const node of buildCards(list)) frag.appendChild(node);
+    els.results.appendChild(frag);
   }
 
   function makeMissingCover(title) {
@@ -271,9 +303,55 @@
   function updateToolbar() {
     const has = state.results.length > 0;
     els.resultsToolbar.hidden = !has;
+    const shown = has ? visibleResults().length : 0;
     els.resultsCount.textContent = has
-      ? state.results.length + (state.results.length === 1 ? ' result' : ' results')
+      ? (shown === state.results.length
+        ? state.results.length + (state.results.length === 1 ? ' result' : ' results')
+        : shown + ' of ' + state.results.length + ' results shown')
       : '';
+  }
+
+  /* The results the user should currently see: server order, then the
+     client-side year range, then the client-side sort. This is pure and does
+     not mutate state.results, so the upstream order is always recoverable and
+     re-sorting never refetches. */
+  function visibleResults() {
+    const f = currentFilters();
+    let list = state.results;
+    if (Search.isLocal('year')) {
+      const yr = Search.filterByYear(list, f.yearFrom, f.yearTo);
+      if (yr.active) list = yr.items;
+    }
+    if (Search.isLocal('sort')) {
+      list = Search.sortResults(list, f.sort);
+    }
+    return list;
+  }
+
+  /* Re-render from state after a client-side sort/year change. */
+  function renderResults() {
+    if (!state.results.length) return;
+    const frag = document.createDocumentFragment();
+    els.results.innerHTML = '';
+    for (const node of buildCards(visibleResults())) frag.appendChild(node);
+    els.results.appendChild(frag);
+    updateToolbar();
+    noteLocalFilterCoverage();
+  }
+
+  /* When a year range is active the app silently drops cards with no listed
+     year (~30% of them), which is indistinguishable from "excluded by the
+     filter". Say so instead. */
+  function noteLocalFilterCoverage() {
+    const f = currentFilters();
+    if (!Search.isLocal('year')) return;
+    const yr = Search.filterByYear(state.results, f.yearFrom, f.yearTo);
+    if (!yr.active || !yr.unknownYear) return;
+    showStatus(
+      yr.kept + ' of ' + state.results.length + ' results on this page match the year filter. ' +
+      yr.unknownYear + ' with no listed year were left out, because there is no way to tell ' +
+      'whether they fall inside the range.'
+    );
   }
 
   async function doSearch(reset = true) {
@@ -307,13 +385,19 @@
       // The active mirror may have changed during failover.
       syncCapabilities();
 
+      state.noMatches = !!res.noMatches;
+
       if (reset && results.length === 0) {
-        showStatus('No results found. Try broadening your filters.');
+        // res.noMatches means upstream served a real results page with zero
+        // matches — an ordinary empty search, not a failure.
+        showStatus('No results found for this search. Try a different term, or Load more to widen it.');
       } else {
         hideStatus();
       }
       state.results = state.results.concat(results);
-      renderCards(results);
+      // Append in server order, then render the sorted/filtered view so a
+      // client-side sort stays consistent across Load more.
+      renderResults();
       els.loadMoreWrap.hidden = results.length < 1;
       updateToolbar();
     } catch (err) {
@@ -537,8 +621,8 @@
     els.results.innerHTML = '';
     els.welcome.hidden = true;
     els.loadMoreWrap.hidden = true;
-    $('f-sort').value = 'newest_added';
-    els.sortSelect.value = 'newest_added';
+    $('f-sort').value = '';
+    els.sortSelect.value = '';
     showStatus('Loading today’s top books & articles…');
 
     const cacheKey = 'anna.home.' + dayStr() + '.top';
@@ -719,7 +803,16 @@
   els.advancedToggle.addEventListener('click', openSheet);
   els.advancedClose.addEventListener('click', closeSheet);
   els.advancedPanel.addEventListener('click', (e) => { if (e.target === els.advancedPanel) closeSheet(); });
-  els.advancedApply.addEventListener('click', () => { closeSheet(); els.sortSelect.value = $('f-sort').value; if (state.query) doSearch(true); });
+  els.advancedApply.addEventListener('click', () => {
+    closeSheet();
+    els.sortSelect.value = $('f-sort').value;
+    if (!state.query) return;
+    // Only refetch when something the mirror actually honours changed.
+    const localOnly = (Search.isLocal('sort') && $('f-sort').value) ||
+      (Search.isLocal('year') && ($('f-year-from').value.trim() || $('f-year-to').value.trim()));
+    if (state.results.length && localOnly) applyLocalFilters();
+    else doSearch(true);
+  });
   els.advancedClear.addEventListener('click', () => {
     $('f-content').value = '';
     $('f-lang').value = '';
@@ -750,14 +843,33 @@
 
   els.tabs.forEach((t) => t.addEventListener('click', () => setCategory(t.dataset.category)));
 
+  /* Sort and year are applied in the browser when the mirror ignores them, so
+     changing either must NOT refetch — that would just re-apply an ignored
+     parameter and throw away the page the user already has. */
+  function applyLocalFilters() {
+    if (state.results.length) {
+      renderResults();
+    } else if (state.query) {
+      doSearch(true);
+    }
+  }
+
   els.sortSelect.addEventListener('change', () => {
     $('f-sort').value = els.sortSelect.value;
-    if (state.query) doSearch(true);
+    if (Search.isLocal('sort')) applyLocalFilters();
+    else if (state.query) doSearch(true);
   });
 
   els.typeSelect.addEventListener('change', () => {
     $('f-ext').value = els.typeSelect.value;
     if (state.query) doSearch(true);
+  });
+
+  $('f-year-from').addEventListener('input', () => {
+    if (Search.isLocal('year')) applyLocalFilters();
+  });
+  $('f-year-to').addEventListener('input', () => {
+    if (Search.isLocal('year')) applyLocalFilters();
   });
 
   els.downloadsDescBtn.addEventListener('click', toggleDescription);
