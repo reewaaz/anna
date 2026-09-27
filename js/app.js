@@ -9,7 +9,7 @@
   const DAILY_TOPICS = ['science', 'history', 'programming', 'fiction', 'philosophy', 'art', 'mathematics'];
 
   /* Bump on every deploy, alongside version.json. See checkForUpdate(). */
-  const APP_VERSION = '2026-09-27.4';
+  const APP_VERSION = '2026-09-27.5';
   const LS_VERSION = 'anna.version';
   const SS_RELOAD = 'anna.reloaded.for';
 
@@ -58,14 +58,22 @@
 
   const state = {
     query: '',
-    category: 'fiction',
+    // '' means "no category", which is what a plain search should do: it
+    // searches everything, the way annas-archive.org's own search box does.
+    // The pill tabs then narrow it. This used to default to 'fiction', which
+    // would have silently restricted every search once categories started
+    // working.
+    category: '',
     page: 1,
     results: [],
     loading: false,
     // Filters the active mirror cannot do upstream, applied in the browser.
     // `noMatches` distinguishes "the query found nothing" from "the fetch
     // failed", so an empty result set is not shown as an error.
-    noMatches: false
+    noMatches: false,
+    // Set when a search returned nothing but a shorter form of the query did,
+    // so the UI can say the results are for a relaxed query.
+    relaxed: null
   };
 
   let currentItem = null;
@@ -82,6 +90,7 @@
     advancedClear: $('advanced-clear'),
     advancedApply: $('advanced-apply'),
     presets: $('presets'),
+    contentSelect: $('f-content'),
     extChips: $('ext-chips'),
     tabs: Array.from(document.querySelectorAll('.cat-nav .tab')),
     results: $('results'),
@@ -154,7 +163,7 @@
     // elements belong here — els.tabs is an Array and has no classList.
     const groups = [
       {
-        cap: 'content',
+        cap: 'category',
         nodes: [
           $('f-content').closest('.field-group'),
           $('presets').closest('.field-group'),
@@ -188,9 +197,10 @@
     }
 
     // The category pill nav is a sibling of the sheet, not inside a field group.
-    const nav = document.querySelector('.cat-nav');
-    if (nav) nav.classList.toggle('unsupported', !caps.content);
-    els.tabs.forEach((t) => { t.disabled = !caps.content; });
+    // Tabs are built from the slugs the active mirror actually serves, so a
+    // mirror without category support ends up with no tabs at all rather than
+    // four buttons that silently do nothing.
+    syncCategoryTabs();
 
     // Grey out file formats this mirror does not offer.
     if (caps.formats) {
@@ -215,8 +225,8 @@
   }
 
   const FILTER_LABELS = {
-    content: 'category', lang: 'language', sort: 'sort order',
-    ext: 'file format', year: 'year range'
+    category: 'category', content: 'category', lang: 'language',
+    sort: 'sort order', ext: 'file format', year: 'year range'
   };
 
   function renderMirrorNote(missing, mirror, local) {
@@ -225,7 +235,8 @@
     const localNames = (local || [])
       .map((c) => FILTER_LABELS[c] || c)
       .filter((c, i, a) => a.indexOf(c) === i);
-    if (!missing.length && !localNames.length) {
+    const notices = mirror.notices || [];
+    if (!missing.length && !localNames.length && !notices.length) {
       el.hidden = true;
       el.textContent = '';
       return;
@@ -251,7 +262,15 @@
         ' cannot be done upstream, so they are applied in your browser to the ' +
         'results on the current page only (use Load more to widen it)');
     }
-    txt.appendChild(document.createTextNode(bits.join('. ') + '.'));
+    if (bits.length) txt.appendChild(document.createTextNode(bits.join('. ') + '.'));
+    // Standing caveats about this mirror. They are not filter diagnostics, so
+    // they get their own paragraph instead of being bolted onto the filter list.
+    for (const n of notices) {
+      const p = document.createElement('div');
+      p.className = 'mn-notice';
+      p.textContent = n;
+      txt.appendChild(p);
+    }
     el.appendChild(ic);
     el.appendChild(txt);
   }
@@ -402,10 +421,19 @@
     );
   }
 
+  /* Monotonic token identifying the newest search. Anything that resolves with
+     an older token has been superseded and must not touch the UI, even if the
+     abort did not land in time. */
+  let searchToken = 0;
+
   async function doSearch(reset = true) {
     const query = els.input.value.trim() || state.query;
     if (!query) return;
     state.query = query;
+    // Supersede whatever is already running (typically the background front
+    // page) instead of queueing behind it or ignoring this search.
+    Search.cancel();
+    const token = ++searchToken;
     if (reset) {
       state.page = 1;
       state.results = [];
@@ -428,19 +456,32 @@
         yearTo: filters.yearTo,
         page: state.page
       });
+      if (token !== searchToken) return;   // a newer search has taken over
       const results = res.results;
 
       // The active mirror may have changed during failover.
       syncCapabilities();
 
       state.noMatches = !!res.noMatches;
+      state.relaxed = res.relaxed || null;
 
-      if (reset && results.length === 0) {
+      if (results.length) {
+        if (res.relaxed) {
+          // Be explicit: these results did NOT match what was typed. Every word
+          // has to match on this mirror and one of them was not in its index,
+          // so a shorter prefix of the query was searched instead.
+          showStatus('No results for “' + res.relaxed.from + '”, so here is what the mirror has ' +
+            'for “' + res.relaxed.to + '”. It combines words one at a time, so every word has to match.');
+        } else {
+          hideStatus();
+        }
+      } else if (reset) {
         // res.noMatches means upstream served a real results page with zero
         // matches — an ordinary empty search, not a failure.
-        showStatus('No results found for this search. Try a different term, or Load more to widen it.');
-      } else {
-        hideStatus();
+        showStatus('No results for “' + query + '” on this mirror. Its search index is incomplete ' +
+          'and shifts as it is rebuilt, so some searches that work on annas-archive.org find ' +
+          'nothing here, and every word has to match. Try fewer words or a different spelling.' +
+          (res.throttledWhileRelaxing ? ' (A shorter retry was also rate-limited, so this may be premature.)' : ''));
       }
       state.results = state.results.concat(results);
       // Append in server order, then render the sorted/filtered view so a
@@ -449,6 +490,11 @@
       els.loadMoreWrap.hidden = results.length < 1;
       updateToolbar();
     } catch (err) {
+      // A cancelled search is not a failure: something newer took over, and that
+      // newer search owns the status line. Showing "search failed" here would
+      // flash an error over a perfectly good result set.
+      if (err && err.name === 'AbortError') return;
+      if (token !== searchToken) return;
       // Report the real, classified reason. The old message hardcoded
       // "the Worker is not deployed yet", which sent users to redeploy a
       // Worker that was running fine.
@@ -459,16 +505,60 @@
       }
       showStatus(msg, true);
     } finally {
-      state.loading = false;
+      if (token === searchToken) state.loading = false;
     }
   }
 
-  function setCategory(cat) {
-    // A category is meaningless on a mirror that ignores `content`. Leave the
-    // selection alone rather than showing the user a filter that does nothing.
-    if (!Search.capabilities().content) return;
-    state.category = cat;
-    els.tabs.forEach((t) => t.classList.toggle('active', t.dataset.category === cat));
+  /* Category tabs are driven by the active mirror's supported slugs, not
+     hardcoded. The mirrors disagree about the parameter name and the value
+     spelling, and one of them supports no categories at all — in which case the
+     nav disappears rather than showing four buttons that quietly do nothing. */
+  function syncCategoryTabs() {
+    const nav = document.querySelector('.cat-nav');
+    if (!nav) return;
+    const supported = Search.categories();
+    const slugs = new Set(supported.map((c) => c.slug));
+    // A tab with no data-category is the "All" entry point and always applies.
+    const usable = els.tabs.filter((t) => !t.dataset.category || slugs.has(t.dataset.category));
+    els.tabs.forEach((t) => {
+      const on = !t.hidden && usable.includes(t);
+      t.hidden = !on;
+      t.disabled = !on;
+    });
+    nav.hidden = usable.length <= 1;      // only "All" left is not a nav
+    nav.classList.toggle('unsupported', usable.length <= 1);
+    paintCategory();
+  }
+
+  /* Paint every category control from state.category, so the pill nav, the
+     preset chips and the content-type select can never disagree. */
+  function paintCategory() {
+    const cur = state.category || '';
+    els.tabs.forEach((t) => t.classList.toggle('active', (t.dataset.category || '') === cur));
+    if (els.presets) {
+      Array.from(els.presets.querySelectorAll('.chip')).forEach((c) => {
+        c.classList.toggle('active', (c.dataset.content || '') === cur);
+      });
+    }
+    if (els.contentSelect) {
+      const opt = Array.from(els.contentSelect.options).find((o) => o.value === cur);
+      if (opt) els.contentSelect.value = cur;
+    }
+  }
+
+  /* opts.fromControl: this call comes from a control (preset chip, select) that
+     already represents an explicit choice and runs its own search. So the value
+     is set outright instead of toggling, and the search is left to the caller.
+     Without it, this is a pill-tab click, which toggles and searches itself. */
+  function setCategory(cat, opts) {
+    const slug = String(cat || '').trim().toLowerCase();
+    if (slug && !Search.isValidCategory(slug)) return;   // mirror would reject it
+    const fromControl = !!(opts && opts.fromControl);
+    // Clicking the active tab clears the filter, so "All" is always reachable
+    // without a separate control and the nav cannot get stuck on one category.
+    state.category = (!fromControl && state.category === slug) ? '' : slug;
+    paintCategory();
+    if (fromControl) return;
     if (state.query) doSearch(true);
     else showStatus('Type a search above, then use these tabs to filter.', false);
   }
@@ -663,7 +753,9 @@
   async function attemptDefaultBrowse() {
     const topic = DAILY_TOPICS[Math.floor(Date.now() / 86400000) % DAILY_TOPICS.length];
     state.query = topic;
-    state.category = 'top';
+    // The front page is an unfiltered browse of everything, so no category is
+    // sent. 'top' was never a valid category slug and is dropped by buildUrl.
+    state.category = '';
     state.page = 1;
     state.results = [];
     els.results.innerHTML = '';
@@ -673,6 +765,10 @@
     els.sortSelect.value = '';
     showStatus('Loading today’s top books & articles…');
 
+    // The front page is the most interruptible request the app makes: the user
+    // is very likely to type a query before it lands, and there is no reason to
+    // keep an answer nobody is waiting for.
+    const token = ++searchToken;
     const cacheKey = 'anna.home.' + dayStr() + '.top';
     let results;
     try {
@@ -682,14 +778,20 @@
       } else {
         // No sort on the front page: the active mirror may not support it,
         // and "newest added" is not available everywhere.
-        const res = await Search.search({ query: topic, category: 'top', page: 1 });
+        const res = await Search.search({ query: topic, page: 1 });
         results = res.results;
+        // The user searched while the front page was loading. doSearch() has
+        // already reset the view and taken the status line, so painting here
+        // would overwrite their results with an unattended page load.
+        if (token !== searchToken) return;
         syncCapabilities();
         if (results.length) localStorage.setItem(cacheKey, JSON.stringify(results));
       }
     } catch (err) {
-      // A failed front page is not worth an error banner on first paint;
-      // the welcome screen explains the state.
+      // A cancelled or failed front page is not worth an error banner on first
+      // paint; the welcome screen explains the state.
+      if (err && err.name === 'AbortError') return;
+      if (token !== searchToken) return;
       results = [];
     }
 
@@ -834,6 +936,14 @@
   }
 
   /* ---------- Wire events ---------- */
+  /* A search is a single click, not a keystroke, so there is nothing to debounce.
+     What did need handling was a submit arriving while another request was
+     already running — most often the background front page that loads on every
+     first visit. Ignoring the new search there (rather than superseding the old
+     one) silently swallowed the user's first real search; superseding it does
+     the opposite of what we want, and costs this rate-limited mirror an extra
+     request. So: cancel the request already in flight, and drop any response
+     that still arrives afterwards. */
   els.form.addEventListener('submit', (e) => {
     e.preventDefault();
     doSearch(true);
@@ -873,13 +983,23 @@
     els.extChips.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
   });
 
+  /* Preset chips, the content-type select and the pill nav are three views of
+     one value. All of them used to write LibGen-style content= ids that this
+     mirror ignores, which is why none of them did anything; they now share the
+     mirror's real category slugs and stay in step through setCategory. */
   els.presets.addEventListener('click', (e) => {
     const btn = e.target.closest('.chip');
     if (!btn) return;
-    $('f-content').value = btn.dataset.content;
-    els.presets.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === btn));
+    setCategory(btn.dataset.content, { fromControl: true });
     if (state.query) doSearch(true);
   });
+
+  if (els.contentSelect) {
+    els.contentSelect.addEventListener('change', () => {
+      setCategory(els.contentSelect.value, { fromControl: true });
+      if (state.query) doSearch(true);
+    });
+  }
 
   els.extChips.addEventListener('click', (e) => {
     const btn = e.target.closest('.chip');

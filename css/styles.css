@@ -264,6 +264,14 @@ main {
 .mirror-note .mn-ic { flex: none; font-size: 13px; line-height: 1.35; }
 .mirror-note b { color: var(--on-surface); font-weight: 600; }
 .mirror-note[hidden] { display: none; }
+      /* Standing caveat about the active mirror, separate from the filter
+         diagnostics above it. */
+      .mirror-note .mn-notice { margin-top: 6px; color: var(--on-surface-variant); }
+
+      /* The category nav and its tabs are display:flex / inline-flex, which
+         beats the [hidden] attribute's UA rule. Without these, hiding a tab the
+         active mirror cannot serve would have no effect. */
+      .cat-nav[hidden], .cat-nav .tab[hidden] { display: none; }
 
 /* Controls the active mirror cannot honour are disabled, not silently ignored. */
 .field-group.unsupported,

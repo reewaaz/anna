@@ -26,8 +26,23 @@ const Search = (() => {
       id: 'is',
       origin: 'https://annas-archive.is',
       label: 'annas-archive.is',
-      caps: { q: true, page: true, ext: true, lang: false, sort: false, content: false, year: false },
-      paramMap: { q: 'q', page: 'page', ext: 'extension' },
+      // `category` is the mirror's own parameter, read off the hidden input in
+      // the search form it renders on every /categories/<slug> page. It was
+      // missed for a long time because an earlier probe tested `content=`,
+      // which this mirror silently ignores -- and that wrong probe is what
+      // disabled the Fiction / Non-fiction / Articles / Magazines tabs.
+      caps: { q: true, page: true, ext: true, category: true, lang: false, sort: false, content: false, year: false },
+      paramMap: { q: 'q', page: 'page', ext: 'extension', category: 'category' },
+      // Slugs the mirror actually serves browse pages for, in the order the
+      // app shows them. Anything outside this list is refused, so the UI must
+      // not invent one.
+      categories: [
+        { slug: 'fiction', label: 'Fiction' },
+        { slug: 'nonfiction', label: 'Non-fiction' },
+        { slug: 'article', label: 'Articles' },
+        { slug: 'magazine', label: 'Magazines' },
+        { slug: 'standards', label: 'Standards' }
+      ],
       sortMap: null,
       extMulti: false,
       // Sort order and year range are ignored upstream, but every card this
@@ -42,28 +57,68 @@ const Search = (() => {
       // (read off its search form), not every format the parser can read.
       formats: ['pdf', 'epub', 'mobi', 'azw3', 'djvu', 'fb2', 'txt', 'rtf'],
       // Measured against the live mirror, not assumed:
-      //   extension=pdf -> 20/20 pdf          honoured
-      //   page=2        -> page 2 loads       honoured
-      //   sort=title    -> 20 results, byte-identical order to no sort  ignored
+      //   extension=pdf   -> 20/20 pdf                              honoured
+      //   page=2          -> page 2 loads                          honoured
+      //   category=fiction -> byte-identical result set to /categories/fiction
+      //                                                               honoured
+      //   sort=title      -> 20 results, byte-identical order to no sort  ignored
       //   sort=oldest|largest|smallest -> 0 results                      broken
-      //   language=en|de|... -> 0 results                               broken
+      //   language=en|de|... -> 0 results (the form's own field name)    broken
       //   content=magazines -> still 20 "Books catalog" cards            ignored
-      //   year_from=1990 -> still returns a 1982 book                   ignored
+      //   year_from=1990  -> still returns a 1982 book                   ignored
       notes: [
         'Sorting and year range are applied in your browser to the results on this page — the mirror ignores both upstream.',
-        'Language and category filters are not available: the mirror returns no results for them.',
+        'Language filtering is unavailable: the mirror returns no results for it.',
         'Download links require a free Anna’s Archive account.'
+      ],
+      // Shown permanently under the search box, because it is the single thing
+      // most likely to make a working app look broken.
+      //
+      // Measured against this mirror, repeatedly:
+      //   "dune", "the hobbit", "lord of the rings", "introduction to
+      //   algorithms", "tolkien", "herbert"   -> 20 results, stably
+      //   "sicp", "wellards", "structure of computer programs" -> 0, stably
+      //   "tolkien" returned 0 earlier the same day and 20 later, so coverage
+      //   shifts as the index is rebuilt.
+      // So: genuinely incomplete, and not stable. It is NOT title-only, and it
+      // is NOT throttling (a known-good query returned 20 on 6/6 attempts while
+      // a known-empty one returned 0 on 3/3).
+      notices: [
+        'This mirror’s search index is incomplete and changes as it is rebuilt, so some ' +
+        'searches that find results on annas-archive.org return nothing here. A search with ' +
+        'no hits is automatically retried with shorter terms, and searches are combined ' +
+        'word by word — all terms must match.'
       ]
     },
     {
       id: 'gl',
       origin: 'https://annas-archive.gl',
       label: 'annas-archive.gl',
-      caps: { q: true, page: true, ext: true, lang: true, sort: true, content: true, year: true },
+      // `category` is deliberately false. Upstream spells this filter
+      // `content=` with its own value names, and those names could NOT be
+      // verified: this mirror answers 403 to every automated request, so there
+      // is no way to test which value maps to which slug. Guessing is worse
+      // than not offering it -- an unverifiable mapping does not fail loudly,
+      // it silently returns the wrong corpus, so Fiction and Non-fiction would
+      // both come back as whatever `books_std` happens to be. The nav is
+      // therefore hidden for this mirror.
+      //
+      // To enable it, probe the mirror and fill in `categories` with the real
+      // values, then set this to true:
+      //   https://annas-archive.gl/search?q=dune&content=<value>
+      // Compare result IDs against the unfiltered query; identical IDs mean the
+      // value is ignored, and check that two slugs do not return the same set.
+      caps: { q: true, page: true, ext: true, category: false, lang: true, sort: true, content: true, year: true },
+      // Upstream annas-archive.org spells the same idea `content=`, with
+      // different value names than the /categories/ slugs, so the two mirrors
+      // need a per-mirror translation rather than one shared paramMap. The
+      // translation itself is implemented and tested (see `def.content` in
+      // buildUrl); only this mirror's values are unverified.
       paramMap: {
         q: 'q', page: 'page', ext: 'ext', lang: 'lang', sort: 'sort',
         content: 'content', year_from: 'year_from', year_to: 'year_to'
       },
+      categories: [],
       sortMap: null,
       extMulti: true,
       local: [],
@@ -84,6 +139,7 @@ const Search = (() => {
     challenge: 'challenge',
     blocked: 'blocked',
     http: 'http',
+    rateLimit: 'rateLimit',
     network: 'network',
     empty: 'empty',
     parse: 'parse',
@@ -149,12 +205,26 @@ const Search = (() => {
   function unsupportedFilters(opts) {
     const out = [];
     const c = activeMirror.caps;
-    if (opts.content && !c.content) out.push('category');
+    if (opts.category && !c.category) out.push('category');
+    if (opts.content && !c.content && !(opts.category && c.category)) out.push('category');
     if (opts.lang && !c.lang) out.push('language');
     if (opts.ext && !c.ext) out.push('format');
     if (opts.sort && !c.sort && !isLocal('sort')) out.push('sort');
     if ((opts.yearFrom || opts.yearTo) && !c.year && !isLocal('year')) out.push('year');
     return out;
+  }
+
+  /* The category slugs the active mirror actually serves. The UI builds its
+     tabs from this, so a mirror that cannot do categories simply yields an
+     empty list and the tabs disable themselves instead of silently doing
+     nothing. */
+  function categories() {
+    return activeMirror.caps.category
+      ? (activeMirror.categories || []).map((c) => ({ slug: c.slug, label: c.label }))
+      : [];
+  }
+  function isValidCategory(slug) {
+    return categories().some((c) => c.slug === String(slug || '').trim().toLowerCase());
   }
 
   /* ---------- URL building ---------- */
@@ -177,6 +247,19 @@ const Search = (() => {
       if (usable.length) set('ext', m.extMulti ? usable.join(',') : usable[0]);
     }
     if (opts.lang && m.caps.lang) set('lang', opts.lang);
+    // Category. The two mirrors disagree on the parameter name and on the value
+    // spelling, so it is translated per mirror and validated against the slugs
+    // the mirror actually serves. An unknown slug is dropped rather than sent,
+    // because the mirror answers an unrecognised one with zero results and a
+    // 200 -- indistinguishable from a real empty search.
+    if (opts.category && m.caps.category) {
+      const slug = String(opts.category).trim().toLowerCase();
+      const def = (m.categories || []).find((c) => c.slug === slug);
+      if (def) {
+        if (m.paramMap.category) set('category', def.slug);
+        else if (def.content && m.caps.content) set('content', def.content);
+      }
+    }
     if (opts.content && m.caps.content) {
       set('content', Array.isArray(opts.content) ? opts.content[0] : opts.content);
     }
@@ -258,6 +341,17 @@ const Search = (() => {
         host: upstreamHost, status: res.status, proxy
       });
     }
+    // 429 is its own case, not a generic HTTP error. This mirror enforces
+    // `Crawl-delay: 10` and starts answering 429 after a few dozen rapid
+    // requests, and "upstream returned an error" tells the user nothing about
+    // what to do about it. The status is also sticky for a few seconds, so a
+    // single short wait turns most of these into a success.
+    if (res.status === 429) {
+      const retryAfter = Number(res.headers.get('retry-after')) || 0;
+      throw new SearchError(REASONS.rateLimit, 'Anna’s Archive is rate-limiting this mirror.', {
+        host: upstreamHost, status: 429, proxy, retryAfter: retryAfter * 1000
+      });
+    }
     if (!res.ok) {
       throw new SearchError(REASONS.http, 'Upstream returned an error.', {
         host: upstreamHost, status: res.status, proxy
@@ -278,58 +372,152 @@ const Search = (() => {
     return text;
   }
 
+  /* ---------- politeness ----------
+     This mirror declares `Crawl-delay: 10` and starts answering 429 well before
+     a few dozen rapid requests have gone out. Pacing requests to the same
+     origin keeps an ordinary user (home page + a search or two + Load more)
+     comfortably under the limit instead of tripping it. */
+  const MIN_GAP_MS = 1200;
+  let lastRequestAt = 0;
+  let gapChain = Promise.resolve();
+
+  /* The in-flight upstream request, so a superseded search can be aborted
+     rather than left to finish. Two things depend on this: a user search that
+     starts while the background front page is still loading must not have to
+     wait for it, and every abandoned request is one this rate-limited mirror
+     never has to answer. */
+  let activeRequest = null;
+  function cancel() {
+    if (!activeRequest) return false;
+    try { activeRequest.abort(); } catch (e) { /* already settled */ }
+    activeRequest = null;
+    return true;
+  }
+  function isPending() { return !!activeRequest; }
+
+  function paceAgainstRateLimit() {
+    const prev = gapChain;
+    gapChain = prev.then(async () => {
+      const wait = lastRequestAt + MIN_GAP_MS - Date.now();
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      lastRequestAt = Date.now();
+    }).catch(() => {});
+    return gapChain;
+  }
+
   async function fetchMirrorHtml(mirror, url, signal) {
     let last;
     for (const proxy of proxies) {
-      try {
-        return { html: await fetchViaProxy(proxy, url, signal), proxy };
-      } catch (err) {
-        if (err && err.name === 'AbortError') throw err;
-        last = err;
+      // One retry, because a 429 is transient: the limit is time-based, so a
+      // short wait turns most of them into a success rather than an error.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await paceAgainstRateLimit();
+          return { html: await fetchViaProxy(proxy, url, signal), proxy };
+        } catch (err) {
+          if (err && err.name === 'AbortError') throw err;
+          last = err;
+          if (!err || err.reason !== REASONS.rateLimit || attempt === 1) break;
+          const wait = Math.min(
+            Math.max(Number(err.detail && err.detail.retryAfter) || 0, 0),
+            10000
+          ) || 2500;
+          await sleep(wait, signal);
+        }
       }
+      // A rate limit is imposed by annas-archive.is, not by the proxy, so
+      // walking the rest of the proxy list would issue identical requests to a
+      // host that has just asked us to slow down. Stop and report it.
+      if (last && last.reason === REASONS.rateLimit) break;
     }
     throw last || new SearchError(REASONS.network, 'No proxy configured.', {});
   }
 
-  /* ---------- public: search ---------- */
-  async function search(opts) {
-    const options = Object.assign({ page: 1 }, opts);
-    const dropped = unsupportedFilters(options);
-    const attempts = [];
+  /* An abortable sleep, so a cancel during a rate-limit backoff takes effect
+     immediately instead of after the full wait. */
+  function sleep(ms, signal) {
+    return new Promise((resolve, reject) => {
+      if (signal && signal.aborted) return reject(abortError());
+      const id = setTimeout(() => {
+        if (signal) signal.removeEventListener('abort', onAbort);
+        resolve();
+      }, ms);
+      function onAbort() {
+        clearTimeout(id);
+        reject(abortError());
+      }
+      if (signal) signal.addEventListener('abort', onAbort, { once: true });
+    });
+  }
+  function abortError() {
+    const e = new Error('The search was cancelled.');
+    e.name = 'AbortError';
+    return e;
+  }
 
+  /* ---------- public: search ---------- */
+
+  /* A zero-result query is not always a zero-result *answer*. Two measured
+     properties of this mirror combine here:
+
+       1. Its search index is incomplete and shifts as it is rebuilt, so terms
+          that exist in the archive are simply absent. "wellards" returns 0 on
+          every attempt, while "orson" returns 20 on every attempt.
+       2. It combines query words with AND, not OR. So "orson wellards" — two
+          words, one of them absent — returns nothing, even though its first word
+          on its own is a solid hit.
+
+     Dropping trailing words therefore recovers the common case of a query that
+     was simply too specific. A term that is absent at every length ("sicp")
+     correctly stays empty, because there is no shorter prefix to fall back to.
+
+     The caller is told exactly what was searched, so the UI can say the results
+     are for a shorter query rather than implying the original one matched. */
+  const MAX_RELAXATIONS = 2;
+  function relaxations(query) {
+    const words = String(query || '').trim().split(/\s+/).filter(Boolean);
+    if (words.length < 2) return [];
+    const out = [];
+    for (let i = words.length - 1; i >= 1 && out.length < MAX_RELAXATIONS; i--) {
+      out.push(words.slice(0, i).join(' '));
+    }
+    return out;
+  }
+
+  /* One pass over the mirror list for a single set of options. Returns either
+     { value } or { error }; never throws except for AbortError. */
+  async function runAttempt(options, dropped) {
+    const attempts = [];
     for (const mirror of mirrors) {
       const url = buildUrl(options, mirror);
+      const controller = new AbortController();
+      activeRequest = controller;
       try {
-        const { html, proxy } = await fetchMirrorHtml(mirror, url);
+        const { html, proxy } = await fetchMirrorHtml(mirror, url, controller.signal);
         const results = Parser.parse(html);
         if (!results.length) {
           // Zero cards is only a *parse* failure if the page is not a results
           // page at all. When it is one, the query genuinely has no matches
           // and that is a successful search with an empty list — reporting it
           // as an error is what made ordinary no-hit searches look broken.
+          // (Verified: the mirror's zero-result pages still carry the search
+          // form, so this check does not mistake them for a layout change.)
           if (!looksLikeResultsPage(html)) {
             attempts.push({ mirror: mirror.id, reason: REASONS.parse, proxy, bytes: html.length });
             continue;
           }
-          setActiveMirror(mirror.id);
-          return {
-            results: [],
-            noMatches: true,
+        }
+        setActiveMirror(mirror.id);
+        return {
+          value: {
+            results,
+            noMatches: !results.length,
             mirror: mirror.id,
             mirrorLabel: mirror.label,
             url,
             droppedFilters: dropped,
             notes: mirror.notes || []
-          };
-        }
-        setActiveMirror(mirror.id);
-        return {
-          results,
-          mirror: mirror.id,
-          mirrorLabel: mirror.label,
-          url,
-          droppedFilters: dropped,
-          notes: mirror.notes || []
+          }
         };
       } catch (err) {
         if (err && err.name === 'AbortError') throw err;
@@ -339,14 +527,53 @@ const Search = (() => {
           message: err && err.message,
           detail: (err && err.detail) || {}
         });
+        // A rate limit is a signal from Anna’s Archive to the client, not a
+        // property of one mirror. Every mirror here is the same site, so
+        // failing over to the next one would just re-issue the request that was
+        // throttled a moment ago and make the throttle worse.
+        if (err && err.reason === REASONS.rateLimit) break;
       }
     }
+    return {
+      error: new SearchError(
+        attempts.length ? attempts[0].reason : REASONS.noMirror,
+        describeFailure(attempts),
+        { attempts }
+      )
+    };
+  }
 
-    throw new SearchError(
-      attempts.length ? attempts[0].reason : REASONS.noMirror,
-      describeFailure(attempts),
-      { attempts }
-    );
+  async function search(opts) {
+    const options = Object.assign({ page: 1 }, opts);
+    const dropped = unsupportedFilters(options);
+
+    const first = await runAttempt(options, dropped);
+    if (first.error) throw first.error;
+    const value = first.value;
+    if (value.results.length || !value.noMatches) return value;
+
+    // A genuine empty result. Try progressively shorter prefixes of the query
+    // before telling the user nothing matched.
+    let throttled = false;
+    for (const shorter of relaxations(options.query)) {
+      const retry = await runAttempt(
+        Object.assign({}, options, { query: shorter }),
+        dropped
+      );
+      if (retry.error) {
+        // A rate limit here is the mirror answering our own extra request, not
+        // the user's query being unfindable. Report the real empty search.
+        if (retry.error.reason === REASONS.rateLimit) { throttled = true; break; }
+        continue;
+      }
+      if (retry.value.results.length) {
+        return Object.assign({}, retry.value, {
+          relaxed: { from: String(options.query).trim(), to: shorter }
+        });
+      }
+    }
+    value.throttledWhileRelaxing = throttled;
+    return value;
   }
 
   function describeFailure(attempts) {
@@ -359,6 +586,8 @@ const Search = (() => {
           return `${a.mirror}: refused (HTTP ${a.detail.status})`;
         case REASONS.http:
           return `${a.mirror}: HTTP ${a.detail.status}`;
+        case REASONS.rateLimit:
+          return `${a.mirror}: rate-limited (HTTP 429)`;
         case REASONS.empty:
           return `${a.mirror}: empty response`;
         case REASONS.parse:
@@ -381,6 +610,7 @@ const Search = (() => {
     const attempts = detail.attempts || [];
     const challenged = attempts.some((a) => a.reason === REASONS.challenge);
     const refused = attempts.some((a) => a.reason === REASONS.blocked);
+    const throttled = reason === REASONS.rateLimit || attempts.some((a) => a.reason === REASONS.rateLimit);
     // Collect statuses from the per-mirror attempts and from the error's own
     // detail, so a single-mirror failure still reports its status code.
     const codes = attempts
@@ -403,6 +633,12 @@ const Search = (() => {
     if (reason === REASONS.parse) {
       return 'The proxy and upstream responded, but the results page layout was not recognised. ' +
         'Anna’s Archive has probably changed its HTML.';
+    }
+    if (throttled) {
+      // Name the cause and the remedy. "Upstream returned an error" leaves the
+      // reader with nothing to do, and this one clears on its own in seconds.
+      return 'Anna’s Archive is rate-limiting this mirror (HTTP 429) — it asks automated clients to ' +
+        'pace themselves. Wait about ten seconds and search again; the app already retries once on its own.';
     }
     if (reason === REASONS.empty) {
       return 'The upstream mirror returned an empty page. That mirror is probably offline.';
@@ -556,11 +792,16 @@ const Search = (() => {
     getActiveMirror,
     getMirrors,
     capabilities,
+    categories,
+    isValidCategory,
     isHonourable,
     isLocal,
     localCaps,
     unsupportedFilters,
     buildUrl,
+    relaxations,
+    cancel,
+    isPending,
     search,
     explain,
     parseSize,

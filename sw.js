@@ -1,5 +1,5 @@
 // Bump when the app shell changes, so returning visitors pick up new JS.
-const CACHE = 'anna-v8';
+const CACHE = 'anna-v9';
 // NOTE: ./version.json is deliberately NOT in ASSETS. It is the source of truth
 // for "is the running build stale?", so precaching it would freeze the answer.
 const ASSETS = [
