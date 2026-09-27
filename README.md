@@ -21,19 +21,57 @@ browser → CORS proxy → https://annas-archive.gl/search?q=…&content=…&ext
 The returned HTML is parsed in the browser into result cards.
 
 > **Proxy note (important).** Anna's Archive sits behind aggressive DDoS-Guard
-> bot protection, so it blocks almost every shared/public CORS proxy. The only
-> public proxy that currently works is **`cors.lol`**, and it rate-limits under
-> load (you may see "limited usage" / "need API key" errors — those come from the
-> *proxy*, not Anna's). **For reliable, unlimited search, deploy the free
-> Cloudflare Worker in `worker/`** (2 commands, see below) and paste its URL into
-> *Settings → Custom proxy*. The app auto-falls back to it.
+> bot protection, which blocks most shared/public CORS proxies. The app routes
+> requests through a Cloudflare Worker (see below) and auto-selects the first
+> upstream mirror that responds.
+>
 > This is a discovery tool — please respect Anna's rate limits.
 
+## Current state of the upstream (verified 2026-09-27)
+
+The Worker at `anna-proxy.riwaj-p.workers.dev` is **deployed and working**. The
+`/search` route of the primary mirror `annas-archive.gl` is **not** reachable by
+any automated client:
+
+| Mirror | `/search` result |
+|---|---|
+| `annas-archive.gl` | **403** DDoS-Guard JS challenge (also with a browser UA, and directly from a residential IP) |
+| `annas-archive.is` | **200** — the only mirror currently serving results |
+| `annas-archive.{org,nu,la,cat,cr,tw,to,ws,nz,se}` | **530** origin down |
+| `annas-archive.{li,gs}` | antibot stubs (`Click for continue…`) |
+| `annas-archive.ph` | 403 · `.vg` 526 · `.cc` 404 |
+| `annas-archive.rs` | **domain squatter** — removed from the Worker's allowlist |
+
+`robots.txt` also declares `Disallow: /search` and `Crawl-delay: 10`.
+
+### What this means for the features
+
+`annas-archive.is` honours only two of the app's filter dimensions. The app now
+**knows this** and disables the unsupported controls rather than silently
+returning unfiltered results:
+
+| Filter | `annas-archive.is` | `annas-archive.gl` |
+|---|---|---|
+| Query (`q`) | works | works |
+| Page (`page`) | works | works |
+| File format | works (`extension=`, 8 formats) | works |
+| Language | **broken** — every value returns 0 results | supported |
+| Sort | **broken** — every value returns 0 results | supported |
+| Category (`content=`) | **ignored** | supported |
+| Year range | **ignored** | supported |
+| Download links | **sign-in required** | supported anonymously |
+
+The app also parses **two** result layouts (the legacy `.gl` list and the current
+catalog card grid) and fails over between mirrors automatically, so it recovers
+on its own if a mirror changes.
+
 ## Features
-- Category tabs: **Top Links** (relevance across all content), **Books**,
-  **Articles** (journals / magazines / standards).
-- Advanced filters: content type, language, file extension, sort order,
-  year-from / year-to.
+- Search by query, with file-format filtering and pagination.
+- Filters that the active mirror cannot honour are **disabled and labelled**,
+  so you never get silently-unfiltered results.
+- Automatic mirror failover, and a real error message when every mirror fails
+  (it tells you *why* — bot protection, HTTP status, empty page, or a layout
+  change — instead of guessing).
 - Result cards with cover, title, author, format, size, year.
 - **In-app viewer**: click a result to open it in an embedded iframe. If the
   site refuses to be framed, a *↗ Browser* button (and automatic fallback)
@@ -68,60 +106,78 @@ npx serve .
 Use **relative paths** (`./`) — already configured in `manifest.webmanifest`
 and the service worker — so it works under the `/anna/` subpath.
 
-## Use your own proxy (recommended for reliability)
-Public proxies share IPs that Anna's protection may block. Deploy a tiny
-**Cloudflare Worker** (free tier) and paste its URL into *Settings → Custom
-proxy* (format: `https://your-worker.dev/?url=`).
+## The proxy Worker
 
-Minimal Worker (`worker.js`):
-
-```js
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-    const target = url.searchParams.get('url');
-    if (!target) return new Response('missing url', { status: 400 });
-    const r = await fetch(target, {
-      headers: { 'User-Agent': request.headers.get('User-Agent') || 'Mozilla/5.0' }
-    });
-    const body = r.body;
-    return new Response(body, {
-      status: r.status,
-      headers: { 'Access-Control-Allow-Origin': '*', 'content-type': r.headers.get('content-type') || 'text/html' }
-    });
-  }
-};
-```
-
-Deploy with the [Wrangler CLI](https://developers.cloudflare.com/workers/):
+`worker/worker.js` is already deployed at
+`https://anna-proxy.riwaj-p.workers.dev/?url=<encoded-url>` and is the app's
+default proxy. To redeploy after editing it:
 
 ```bash
 cd worker
-wrangler deploy        # uses worker/wrangler.toml (no wrangler init needed)
+wrangler login          # once; needs an interactive terminal
+wrangler deploy         # uses worker/wrangler.toml
 ```
 
-It prints a URL like `https://anna-proxy.<subdomain>.workers.dev`. Paste that
-into the app's **Settings → Custom proxy** (the app auto-falls back to it
-whenever the public proxies are blocked).
+The Worker:
+
+- allowlists Anna's Archive hosts explicitly (so it can't be used as an open proxy)
+- detects the DDoS-Guard interstitial and reports it via the `x-anna-challenge` header
+- never caches a block or an error response (`cache-control: no-store`)
+
+To use a different proxy, set it in *Settings → Custom proxy* in the form
+`https://your-worker.dev/?url=`.
 
 ## File layout
 ```
 index.html
 .nojekyll
 css/styles.css
-js/search.js     # proxy + Anna's URL builder + fetch
-js/parser.js     # extract results from search HTML
+js/search.js     # mirror profiles + capabilities, URL builder, fetch, error classification
+js/parser.js     # result extraction for both the catalog and legacy layouts
 js/viewer.js     # in-app iframe viewer + fallback
-js/app.js        # UI: tabs, grid, filters, settings
+js/app.js        # UI: tabs, grid, filters, capability gating
 manifest.webmanifest
 sw.js            # offline app-shell cache
+worker/worker.js # CORS proxy (Cloudflare Worker)
 icons/icon.svg
 ```
+
+## Adding or changing a mirror
+
+Mirrors are declared in `js/search.js` (`MIRRORS`). Each entry states the
+capabilities it actually honours, so the app can disable what it cannot do:
+
+```js
+{
+  id: 'is',
+  origin: 'https://annas-archive.is',
+  caps: { q: true, page: true, ext: true, lang: false, sort: false, content: false, year: false },
+  paramMap: { q: 'q', page: 'page', ext: 'extension' },
+  formats: ['pdf', 'epub', 'mobi', 'azw3', 'djvu', 'fb2', 'txt', 'rtf'],
+  notes: ['...']
+}
+```
+
+`paramMap` maps the app's filter names to the mirror's query parameters —
+`annas-archive.is` spells them `language` and `extension`, not `lang` and `ext`.
+The host must also be added to `ALLOWED_HOSTS` in `worker/worker.js`.
+
+Verify a mirror's real behaviour before claiming a capability:
+
+```
+https://<mirror>/search?q=python&<param>=<value>
+```
+
+Compare result IDs against the unfiltered query — identical IDs mean the
+parameter is ignored, zero results means it is broken.
 
 ## Notes & limitations
 - In-app framing of Anna's detail pages may be blocked (`X-Frame-Options` /
   `frame-ancestors`); the app automatically offers an external-browser fallback.
-- Search accuracy depends on Anna's HTML structure and the proxy staying
-  unblocked; parsing is best-effort and tolerant of layout changes.
+- `annas-archive.is` requires a signed-in account before it reveals download
+  links. The app detects this and says so instead of showing an empty list.
+- Search depends on upstream HTML staying the same. The parser detects layouts
+  structurally and the client fails over between mirrors, but a large redesign
+  would need a new parser path.
 - This tool only helps **discover** catalog entries. Downloading/accessing
   content is subject to Anna's Archive terms and your local laws.

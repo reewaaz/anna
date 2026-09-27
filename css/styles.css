@@ -253,6 +253,36 @@ main {
 .status { padding: 34px 14px; color: var(--on-surface-variant); text-align: center; font-size: 15px; line-height: 1.6; }
 .status.error { color: var(--danger); }
 
+/* ---------- Mirror capability notice ---------- */
+.mirror-note {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin: 10px auto 0; max-width: 1120px; padding: 10px 14px;
+  border: 1px solid var(--outline-variant); border-left: 3px solid var(--accent);
+  border-radius: 10px; background: var(--surface-1);
+  color: var(--on-surface-variant); font-size: 12.5px; line-height: 1.5;
+}
+.mirror-note .mn-ic { flex: none; font-size: 13px; line-height: 1.35; }
+.mirror-note b { color: var(--on-surface); font-weight: 600; }
+.mirror-note[hidden] { display: none; }
+
+/* Controls the active mirror cannot honour are disabled, not silently ignored. */
+.field-group.unsupported,
+.chips.unsupported,
+.cat-nav.unsupported,
+.welcome-cats.unsupported { opacity: .4; }
+.field-group.unsupported .fg-label::after {
+  content: 'unsupported by this mirror';
+  display: block; margin-top: 4px;
+  font-size: 11px; font-weight: 500; color: var(--danger); opacity: .9;
+}
+select:disabled, input:disabled, .chip:disabled { cursor: not-allowed; }
+.chip:disabled { opacity: .4; }
+
+/* Sign-in gate shown when a mirror withholds download links from anonymous visitors. */
+.dl-login-gate { padding: 22px 18px; text-align: center; }
+.dl-login-gate b { display: block; margin-bottom: 6px; font-size: 15px; }
+.dl-login-gate p { max-width: 46ch; margin: 0 auto; }
+
 /* ---------- Result cards ---------- */
 .results-grid {
   display: grid; gap: 18px;

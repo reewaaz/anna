@@ -87,17 +87,103 @@
 
   function applyProxy() {
     const custom = (localStorage.getItem(LS_PROXY) || '').trim();
-    Search.setFallback(custom);
-    if (custom) {
-      Search.setProxies([custom, ...Search.DEFAULT_PROXIES]);
+    Search.setProxiesFromCustom(custom);
+    syncCapabilities();
+  }
+
+  /* Disable (and explain) any filter the active upstream mirror cannot honour.
+     Sending a filter that is ignored is worse than not sending it: the user
+     believes results are narrowed when they are not. */
+  function syncCapabilities() {
+    const caps = Search.capabilities();
+    const mirror = Search.getActiveMirror();
+
+    // Map each filter control to the capability that governs it. Only real
+    // elements belong here — els.tabs is an Array and has no classList.
+    const groups = [
+      {
+        cap: 'content',
+        nodes: [
+          $('f-content').closest('.field-group'),
+          $('presets').closest('.field-group'),
+          els.welcome ? els.welcome.querySelector('.welcome-cats') : null
+        ]
+      },
+      { cap: 'lang', nodes: [$('f-lang').closest('.field-group')] },
+      { cap: 'sort', nodes: [$('f-sort').closest('.field-group'), els.sortSelect.closest('.sort-wrap')] },
+      { cap: 'ext', nodes: [els.extChips, $('f-ext').closest('.field-group'), els.typeSelect.closest('.sort-wrap')] },
+      { cap: 'year', nodes: [$('f-year-from').closest('.field-row')] }
+    ];
+
+    const missing = [];
+    for (const g of groups) {
+      const ok = !!caps[g.cap];
+      if (!ok) missing.push(g.cap);
+      for (const node of g.nodes) {
+        if (!node) continue;
+        node.classList.toggle('unsupported', !ok);
+        // Disable interactive descendants only.
+        Array.from(node.querySelectorAll('input, select, button')).forEach((el) => {
+          el.disabled = !ok;
+        });
+      }
+    }
+
+    // The category pill nav is a sibling of the sheet, not inside a field group.
+    const nav = document.querySelector('.cat-nav');
+    if (nav) nav.classList.toggle('unsupported', !caps.content);
+    els.tabs.forEach((t) => { t.disabled = !caps.content; });
+
+    // Grey out file formats this mirror does not offer.
+    if (caps.formats) {
+      const allowed = new Set(caps.formats);
+      Array.from(els.extChips.querySelectorAll('.chip')).forEach((chip) => {
+        chip.disabled = !allowed.has(chip.dataset.ext);
+      });
+      Array.from(els.typeSelect.options).forEach((opt) => {
+        opt.disabled = !!opt.value && !allowed.has(opt.value);
+      });
+    }
+
+    // Sort options: a mirror with no sort support cannot offer any of them.
+    if (!caps.sort) {
+      [$('f-sort'), els.sortSelect].forEach((sel) => {
+        Array.from(sel.options).forEach((o) => { o.disabled = !!o.value; });
+      });
+    }
+
+    renderMirrorNote(missing, mirror);
+  }
+
+  const FILTER_LABELS = {
+    content: 'category', lang: 'language', sort: 'sort order',
+    ext: 'file format', year: 'year range'
+  };
+
+  function renderMirrorNote(missing, mirror) {
+    const el = $('mirror-note');
+    if (!el) return;
+    if (!missing.length) {
+      el.hidden = true;
+      el.textContent = '';
       return;
     }
-    Search.setProxies([...Search.DEFAULT_PROXIES]);
-    Search.detectWorkingProxy().then((best) => {
-      if (best && best !== Search.DEFAULT_PROXIES[0]) {
-        Search.setProxies([best, ...Search.DEFAULT_PROXIES.filter((p) => p !== best)]);
-      }
-    });
+    const names = missing.map((m) => FILTER_LABELS[m] || m);
+    el.hidden = false;
+    el.innerHTML = '';
+    const ic = document.createElement('span');
+    ic.className = 'mn-ic';
+    ic.textContent = 'ⓘ';
+    const txt = document.createElement('div');
+    const strong = document.createElement('b');
+    strong.textContent = mirror.label + ' — ';
+    txt.appendChild(strong);
+    txt.appendChild(document.createTextNode(
+      'this mirror does not support ' + names.join(', ') +
+      '. Those controls are disabled rather than silently ignored, so results are unfiltered by them.'
+    ));
+    el.appendChild(ic);
+    el.appendChild(txt);
   }
 
   function renderCards(list) {
@@ -206,7 +292,7 @@
 
     try {
       const filters = currentFilters();
-      const results = await Search.search({
+      const res = await Search.search({
         query,
         category: state.category,
         lang: filters.lang,
@@ -216,6 +302,10 @@
         yearTo: filters.yearTo,
         page: state.page
       });
+      const results = res.results;
+
+      // The active mirror may have changed during failover.
+      syncCapabilities();
 
       if (reset && results.length === 0) {
         showStatus('No results found. Try broadening your filters.');
@@ -227,14 +317,24 @@
       els.loadMoreWrap.hidden = results.length < 1;
       updateToolbar();
     } catch (err) {
-      showStatus('Search failed. The proxy Worker (anna-proxy.riwaj-p.workers.dev) may be down or not deployed yet. ' +
-        'Deploy it with: cd worker && wrangler deploy', true);
+      // Report the real, classified reason. The old message hardcoded
+      // "the Worker is not deployed yet", which sent users to redeploy a
+      // Worker that was running fine.
+      const detail = err && err.detail && err.detail.attempts ? err.detail.attempts : [];
+      let msg = Search.explain(err);
+      if (detail.length) {
+        msg += '  (' + detail.map((a) => a.mirror + ': ' + a.reason).join(', ') + ')';
+      }
+      showStatus(msg, true);
     } finally {
       state.loading = false;
     }
   }
 
   function setCategory(cat) {
+    // A category is meaningless on a mirror that ignores `content`. Leave the
+    // selection alone rather than showing the user a filter that does nothing.
+    if (!Search.capabilities().content) return;
     state.category = cat;
     els.tabs.forEach((t) => t.classList.toggle('active', t.dataset.category === cat));
     if (state.query) doSearch(true);
@@ -311,22 +411,50 @@
     showDownloadsStatus('Loading download links…');
 
     try {
-      const url = Search.proxiedUrl(r.href);
-      const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const text = await res.text();
+      const text = await Search.fetchProxied(r.href);
       currentItemHtml = text;
-      const links = Parser.parseDownloads(text);
-      if (!links.length) throw new Error('No download links found');
+      const { links, loginRequired } = Parser.parseDownloads(text);
+
+      if (!links.length && loginRequired) {
+        renderLoginGate();
+        showDownloadsStatus(
+          'This mirror requires a signed-in Anna’s Archive account before it reveals download ' +
+          'links. Use “Open on Anna’s” to view the record and sign in there.', true);
+        return;
+      }
+      if (!links.length) {
+        showDownloadsStatus('No download links found on this record.', true);
+        return;
+      }
       renderDownloadLinks(links);
       hideDownloadsStatus();
-    } catch (_) {
-      showDownloadsStatus('Could not load download links. The proxy may be busy — try again, or use “Open on Anna’s”.', true);
+    } catch (err) {
+      showDownloadsStatus('Could not load download links. ' + Search.explain(err), true);
     }
+  }
+
+  /* Mirrors that gate downloads behind an account render a sign-in prompt
+     instead of a list. Say so explicitly rather than showing an empty box. */
+  function renderLoginGate() {
+    els.downloadsList.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'dl-login-gate';
+    const h = document.createElement('b');
+    h.textContent = 'Sign-in required';
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = 'This mirror only reveals download links to signed-in visitors. ' +
+      'Open the record on Anna’s Archive to continue.';
+    box.appendChild(h);
+    box.appendChild(p);
+    els.downloadsList.appendChild(box);
   }
 
   async function toggleDescription() {
     if (!currentItem) return;
+    if (!currentItemHtml) {
+      showDownloadsStatus('Loading record details…');
+    }
     // Toggle off if already visible.
     if (!els.downloadsDesc.hidden) {
       els.downloadsDesc.hidden = true;
@@ -340,12 +468,8 @@
     els.downloadsDesc.classList.add('loading');
     try {
       let html = currentItemHtml;
-      if (!html) {
-        const res = await fetch(Search.proxiedUrl(currentItem.href), { headers: { 'Accept': 'text/html' } });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        html = await res.text();
-        currentItemHtml = html;
-      }
+      if (!html) html = await Search.fetchProxied(currentItem.href);
+      currentItemHtml = html;
       const desc = Parser.parseDescription(html);
       els.downloadsDesc.classList.remove('loading');
       els.downloadsDesc.dataset.loaded = '1';
@@ -355,10 +479,12 @@
       }
       // desc is already sanitized HTML from the parser — render as-is.
       els.downloadsDesc.innerHTML = desc;
-    } catch (_) {
+      hideDownloadsStatus();
+    } catch (err) {
       els.downloadsDesc.classList.remove('loading');
       els.downloadsDesc.dataset.loaded = '1';
       els.downloadsDesc.innerHTML = '<em>Could not load the description.</em>';
+      showDownloadsStatus(Search.explain(err), true);
     }
   }
 
@@ -422,10 +548,16 @@
       if (cached) {
         results = JSON.parse(cached);
       } else {
-        results = await Search.search({ query: topic, category: 'top', sort: 'newest_added', page: 1 });
+        // No sort on the front page: the active mirror may not support it,
+        // and "newest added" is not available everywhere.
+        const res = await Search.search({ query: topic, category: 'top', page: 1 });
+        results = res.results;
+        syncCapabilities();
         if (results.length) localStorage.setItem(cacheKey, JSON.stringify(results));
       }
-    } catch (_) {
+    } catch (err) {
+      // A failed front page is not worth an error banner on first paint;
+      // the welcome screen explains the state.
       results = [];
     }
 

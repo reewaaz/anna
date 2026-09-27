@@ -30,6 +30,8 @@ const Viewer = (() => {
     document.getElementById('viewer').hidden = false;
 
     // Load through the proxy so Anna's X-Frame-Options doesn't block framing.
+    // The proxy re-serves the page with CORS headers and no X-Frame-Options,
+    // which is what makes in-app framing possible at all.
     const proxied = (typeof Search !== 'undefined' && Search.proxiedUrl) ? Search.proxiedUrl(url) : url;
     frame.src = proxied;
 

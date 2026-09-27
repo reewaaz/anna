@@ -1,4 +1,5 @@
-const CACHE = 'anna-v5';
+// Bump when the app shell changes, so returning visitors pick up new JS.
+const CACHE = 'anna-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -31,6 +32,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
   // Never cache cross-origin proxy/Anna requests; always go to network.
+  // Search results are per-query and change constantly, and a cached 403 from
+  // Anna's bot protection would otherwise stick around long after it lifted.
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
