@@ -1,5 +1,5 @@
 // Bump when the app shell changes, so returning visitors pick up new JS.
-const CACHE = 'anna-v6';
+const CACHE = 'anna-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -36,11 +36,22 @@ self.addEventListener('fetch', (event) => {
   // Anna's bot protection would otherwise stick around long after it lifted.
   if (url.origin !== self.location.origin) return;
 
+  // Network-first for the app shell. This was cache-first, which meant a fix
+  // only reached anyone who remembered to bump CACHE by hand -- a broken
+  // build kept serving itself indefinitely and looked like the deploy had not
+  // landed. Now a new deploy is picked up on the next load, and the cache is
+  // only a fallback for offline use.
   event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-      return res;
-    }).catch(() => cached))
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() =>
+        caches.match(req).then((cached) => cached || caches.match('./index.html'))
+      )
   );
 });
