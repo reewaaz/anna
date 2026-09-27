@@ -1,13 +1,13 @@
-# Anna — Archive Search (PWA)
+﻿# Anna â€” Archive Search (PWA)
 
 A portable, installable web app to **search Anna's Archive** by category
 (**Top Links / Books / Articles**), with **advanced filters** (language,
 format, sort, year range) and an **in-app viewer** that opens results inside
 the app (falling back to your browser when a site blocks framing).
 
-It is a static PWA — no backend, no build step. It runs anywhere it can be
+It is a static PWA â€” no backend, no build step. It runs anywhere it can be
 served over `http(s)` or `localhost`, and installs as an app on Windows
-(Edge/Chrome → *Install*) and Android (Chrome → *Add to Home Screen*).
+(Edge/Chrome â†’ *Install*) and Android (Chrome â†’ *Add to Home Screen*).
 
 ## Data source & how search works
 Anna's Archive has **no official public API** and sits behind **DDoS-Guard** bot
@@ -15,7 +15,7 @@ protection, and its pages can't be fetched cross-origin from a browser. So the
 app routes requests through a **CORS proxy**:
 
 ```
-browser → CORS proxy → https://annas-archive.gl/search?q=…&content=…&ext=…&sort=…
+browser â†’ CORS proxy â†’ https://annas-archive.gl/search?q=â€¦&content=â€¦&ext=â€¦&sort=â€¦
 ```
 
 The returned HTML is parsed in the browser into result cards.
@@ -25,7 +25,7 @@ The returned HTML is parsed in the browser into result cards.
 > requests through a Cloudflare Worker (see below) and auto-selects the first
 > upstream mirror that responds.
 >
-> This is a discovery tool — please respect Anna's rate limits.
+> This is a discovery tool â€” please respect Anna's rate limits.
 
 ## Current state of the upstream (verified 2026-09-27)
 
@@ -35,14 +35,24 @@ any automated client:
 
 | Mirror | `/search` result |
 |---|---|
+| `annas-archive.is` | **200** - the only mirror currently serving results |
 | `annas-archive.gl` | **403** DDoS-Guard JS challenge (also with a browser UA, and directly from a residential IP) |
-| `annas-archive.is` | **200** — the only mirror currently serving results |
+| `annas-archive.gd` | **302 -> `?check=1`** - same DDoS-Guard, `Server: ddos-guard` |
+| `annas-archive.pk` | **403** DDoS-Guard JS challenge |
 | `annas-archive.{org,nu,la,cat,cr,tw,to,ws,nz,se}` | **530** origin down |
-| `annas-archive.{li,gs}` | antibot stubs (`Click for continue…`) |
-| `annas-archive.ph` | 403 · `.vg` 526 · `.cc` 404 |
-| `annas-archive.rs` | **domain squatter** — removed from the Worker's allowlist |
+| `annas-archive.{li,gs}` | antibot stubs (`Click for continue...`) |
+| `annas-archive.ph` | 403 / `.vg` 526 / `.cc` 404 |
+| `annas-archive.rs` | **domain squatter** - removed from the Worker's allowlist |
 
-`robots.txt` also declares `Disallow: /search` and `Crawl-delay: 10`.
+`robots.txt` declares `Disallow: /search` and `Crawl-delay: 10` on `.gl`, `.pk`
+**and** `.gd`. `.is` is the only mirror whose `robots.txt` permits `/search`.
+
+`.gd`, `.gl` and `.pk` are the three domains tracked by the Shadow Libraries
+directory and its uptime monitor, and all three sit behind the same bot
+protection. That directory is a link list, not a search index - it has no search
+of its own, and its "can't access the site?" section is DNS/VPN/TOR advice,
+which this project does not implement. There is no alternate host there that
+serves `/search`.
 
 ### What this means for the features
 
@@ -53,14 +63,14 @@ Measured directly against the live mirror, not assumed:
 | Query (`q`) | works | sent upstream |
 | Page (`page`) | works | sent upstream |
 | File format | works (`extension=`, 8 formats) | sent upstream |
-| Sort | **ignored** — `sort=title` returns results in the *same order* as no sort; `sort=oldest/largest/smallest` return 0 results | applied in the browser |
-| Year range | **ignored** — `year_from=1990` still returns a 1982 book | applied in the browser |
-| Language | **broken** — every value returns 0 results | disabled, with the reason shown |
-| Category (`content=`) | **ignored** — `content=magazines` still returns 20 "Books catalog" cards | disabled, with the reason shown |
+| Sort | **ignored** â€” `sort=title` returns results in the *same order* as no sort; `sort=oldest/largest/smallest` return 0 results | applied in the browser |
+| Year range | **ignored** â€” `year_from=1990` still returns a 1982 book | applied in the browser |
+| Language | **broken** â€” every value returns 0 results | disabled, with the reason shown |
+| Category (`content=`) | **ignored** â€” `content=magazines` still returns 20 "Books catalog" cards | disabled, with the reason shown |
 | Download links | **sign-in required** | the modal says so instead of showing an empty list |
 
 **Sorting and year range are done client-side.** The mirror ignores both, so
-they are not sent upstream at all — sending them would be worse than useless,
+they are not sent upstream at all â€” sending them would be worse than useless,
 since three of the four sort values return *zero* results. Instead the app sorts
 and filters the cards it has already loaded, using metadata that is present on
 essentially all of them: title on 100%, file size on 100%, year on ~70%.
@@ -82,7 +92,7 @@ catalog card grid) and fails over between mirrors automatically, so it recovers
 on its own if a mirror changes.
 
 A search that legitimately matches nothing is now reported as "no results", not
-as a failure. Both look identical to the parser — zero cards — so the app checks
+as a failure. Both look identical to the parser â€” zero cards â€” so the app checks
 whether the page is a real results page before calling it a layout change. This
 was the cause of the misleading `(is: parse, gl: challenge)` message.
 
@@ -91,18 +101,30 @@ was the cause of the misleading `(is: parse, gl: challenge)` message.
 - Filters that the active mirror cannot honour are **disabled and labelled**,
   so you never get silently-unfiltered results.
 - Automatic mirror failover, and a real error message when every mirror fails
-  (it tells you *why* — bot protection, HTTP status, empty page, or a layout
-  change — instead of guessing).
+  (it tells you *why* â€” bot protection, HTTP status, empty page, or a layout
+  change â€” instead of guessing).
 - Result cards with cover, title, author, format, size, year.
 - **In-app viewer**: click a result to open it in an embedded iframe. If the
-  site refuses to be framed, a *↗ Browser* button (and automatic fallback)
+  site refuses to be framed, a *â†— Browser* button (and automatic fallback)
   opens it in your system browser.
 - Installable offline PWA (service worker caches the app shell).
 - All settings (proxy choice) persisted in `localStorage`.
+- **Self-healing builds.** The app compares its own version stamp against the
+  deployed `version.json` on boot. A browser running an old build drops its
+  stale data snapshots and reloads itself, so a fix reaches the browser without
+  anyone having to remember a hard refresh.
+
+### Releasing a change
+
+Bump `APP_VERSION` in `js/app.js` **and** `version` in `version.json` in the
+same commit, and bump `CACHE` in `sw.js` when the app shell changed. The two
+version stamps must always agree, or every visitor reloads on every load. The
+reload is guarded per-version in `sessionStorage`, so a half-finished deploy
+cannot turn into a reload loop.
 
 ## Run it locally (Windows)
 Any static server works (service workers need a secure context, so `file://`
-won't enable install/offline — use a local server):
+won't enable install/offline â€” use a local server):
 
 ```powershell
 # Python 3
@@ -120,12 +142,12 @@ npx serve .
 1. Push this folder to the `anna` repo.
 2. Add a `.nojekyll` file (already included) so GitHub's Jekyll ignores the
    files.
-3. In repo **Settings → Pages**, set the source to the branch root.
+3. In repo **Settings â†’ Pages**, set the source to the branch root.
 4. The app will be live at `https://<user>.github.io/anna/`.
    Open it on Android and choose *Add to Home Screen* to install.
 
-Use **relative paths** (`./`) — already configured in `manifest.webmanifest`
-and the service worker — so it works under the `/anna/` subpath.
+Use **relative paths** (`./`) â€” already configured in `manifest.webmanifest`
+and the service worker â€” so it works under the `/anna/` subpath.
 
 ## The proxy Worker
 
@@ -145,7 +167,7 @@ The Worker:
 - detects the DDoS-Guard interstitial and reports it via the `x-anna-challenge` header
 - never caches a block or an error response (`cache-control: no-store`)
 
-To use a different proxy, set it in *Settings → Custom proxy* in the form
+To use a different proxy, set it in *Settings â†’ Custom proxy* in the form
 `https://your-worker.dev/?url=`.
 
 ## File layout
@@ -184,11 +206,11 @@ A capability is one of three things:
 
 | Value | Meaning |
 |---|---|
-| `true` | the mirror honours it — sent as a query parameter |
+| `true` | the mirror honours it â€” sent as a query parameter |
 | `'local'` *(the `local` array)* | upstream ignores it, but the app can honour it in the browser from the card metadata, so it is **not** dropped and the control stays enabled |
-| `false` | nothing can honour it — the control is disabled with a reason |
+| `false` | nothing can honour it â€” the control is disabled with a reason |
 
-`paramMap` maps the app's filter names to the mirror's query parameters —
+`paramMap` maps the app's filter names to the mirror's query parameters â€”
 `annas-archive.is` spells them `language` and `extension`, not `lang` and `ext`.
 The host must also be added to `ALLOWED_HOSTS` in `worker/worker.js`.
 
@@ -198,7 +220,7 @@ Verify a mirror's real behaviour before claiming a capability:
 https://<mirror>/search?q=python&<param>=<value>
 ```
 
-Compare result IDs against the unfiltered query — identical IDs mean the
+Compare result IDs against the unfiltered query â€” identical IDs mean the
 parameter is ignored, zero results means it is broken.
 
 ## Notes & limitations

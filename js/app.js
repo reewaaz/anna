@@ -8,6 +8,54 @@
   const LS_THEME = 'anna.theme';
   const DAILY_TOPICS = ['science', 'history', 'programming', 'fiction', 'philosophy', 'art', 'mathematics'];
 
+  /* Bump on every deploy, alongside version.json. See checkForUpdate(). */
+  const APP_VERSION = '2026-09-27.4';
+  const LS_VERSION = 'anna.version';
+  const SS_RELOAD = 'anna.reloaded.for';
+
+  /* A returning browser can be running code that is several deploys old, and
+     the symptoms are baffling: the front page still renders (it is served from
+     a localStorage snapshot, so it never touches the network) while a typed
+     search fails against code that no longer matches the server. Telling the
+     user to hard-refresh worked, but only if they noticed.
+
+     So the app checks its own version against the deployed one and reloads
+     itself when they differ. The daily homepage snapshot is dropped at the
+     same time, because it was parsed by the old parser and its metadata no
+     longer matches what this build expects. */
+  async function checkForUpdate() {
+    let deployed = null;
+    try {
+      const res = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        deployed = data && data.version;
+      }
+    } catch (err) {
+      return; // offline: keep running whatever is already loaded
+    }
+    if (!deployed) return;
+    if (deployed === APP_VERSION) {
+      // Already current. Record it anyway so the stored stamp stays observable
+      // when diagnosing "which build is this browser running?".
+      try { localStorage.setItem(LS_VERSION, APP_VERSION); } catch (err) { /* ignore */ }
+      return;
+    }
+    if (localStorage.getItem(LS_VERSION) === APP_VERSION) return; // already current
+
+    localStorage.setItem(LS_VERSION, APP_VERSION);
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.indexOf('anna.home.') === 0)
+        .forEach((k) => localStorage.removeItem(k));
+    } catch (err) { /* storage disabled; the reload still helps */ }
+
+    // One reload per version, so a bad deploy cannot become a reload loop.
+    if (sessionStorage.getItem(SS_RELOAD) === deployed) return;
+    try { sessionStorage.setItem(SS_RELOAD, deployed); } catch (err) { /* ignore */ }
+    location.reload();
+  }
+
   const state = {
     query: '',
     category: 'fiction',
@@ -918,6 +966,8 @@
   // Establish the parser's origin now that every module is loaded.
   // search.js is evaluated before parser.js, so it cannot do this itself.
   Search.init();
+  // Fire and forget: a stale build reloads itself, it does not block boot.
+  checkForUpdate();
   applyProxy();
   setupInstall();
   setupViewToggle();

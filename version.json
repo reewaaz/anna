@@ -1,0 +1,4 @@
+{
+  "version": "2026-09-27.4",
+  "note": "Bump this together with APP_VERSION in js/app.js on every deploy. The app reloads itself when the two disagree, which is what stops a browser from silently running a stale build."
+}
