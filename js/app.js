@@ -803,6 +803,9 @@
     els.onboard.hidden = true;
   });
 
+  // Establish the parser's origin now that every module is loaded.
+  // search.js is evaluated before parser.js, so it cannot do this itself.
+  Search.init();
   applyProxy();
   setupInstall();
   setupViewToggle();

@@ -102,7 +102,7 @@ const Search = (() => {
     const m = mirrors.find((x) => x.id === id);
     if (m) {
       activeMirror = m;
-      Parser.setOrigin(m.origin);
+      syncParserOrigin();
     }
     return activeMirror;
   }
@@ -354,11 +354,27 @@ const Search = (() => {
     return fetchViaProxy(proxies[0] || AA_PROXY, target);
   }
 
-  Parser.setOrigin(activeMirror.origin);
+  // NOTE: this module is loaded *before* parser.js in index.html, so Parser
+  // does not exist yet at this point. Touching it here threw
+  // "ReferenceError: Parser is not defined", which killed the whole script and
+  // left the app stuck on "Searching…" with no results. setOrigin() is called
+  // from setActiveMirror() (which runs after both modules are loaded) instead.
+  function syncParserOrigin() {
+    if (typeof Parser !== 'undefined' && Parser && typeof Parser.setOrigin === 'function') {
+      Parser.setOrigin(activeMirror.origin);
+    }
+  }
+
+  // Called by app.js once every module is loaded, to establish the initial
+  // parser origin without depending on script evaluation order.
+  function init() {
+    syncParserOrigin();
+  }
 
   return {
     MIRRORS,
     AA_PROXY,
+    init,
     setProxies,
     setProxiesFromCustom,
     setMirrors,
